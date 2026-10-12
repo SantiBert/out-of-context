@@ -8,8 +8,8 @@ description: Configure local and deployment environments safely for the Out Of C
 ## Principles
 - Never commit real credentials, tokens, private keys, production URLs containing credentials, or populated `.env` files.
 - Provide `.env.example` with variable names and safe placeholder values only.
-- Ensure `.env`, virtual environments, caches, generated Flutter output, local databases, and IDE-specific state are appropriately ignored by Git.
-- Do not place secrets in Flutter assets or compile-time client configuration. Anything shipped in an Android app must be treated as public.
+- Ensure `.env`, virtual environments, caches, generated React Native and Node build output, local databases, and IDE-specific state are appropriately ignored by Git.
+- Do not place secrets in the mobile application bundle or compile-time client configuration. Anything shipped in an Android app must be treated as public.
 - Use separate local-development and production settings. Never silently enable debug settings in production.
 - Do not expose database ports publicly unless local development explicitly requires host access; document the binding and use safe defaults.
 - Pin service image versions deliberately rather than relying on `latest`.

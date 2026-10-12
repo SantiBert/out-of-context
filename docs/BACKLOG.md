@@ -54,7 +54,7 @@
 | ID | Épica | Prioridad | Estado | Dependencias |
 |---|---|---|---|---|
 | OOC-001 | Documentar y validar las reglas del juego | P0 | IN_PROGRESS | Ninguna |
-| OOC-002 | Crear la estructura del monorepo | P0 | TODO | OOC-001 |
+| OOC-002 | Crear la estructura del monorepo | P0 | IN_PROGRESS | OOC-001 |
 | OOC-003 | Configurar entornos, calidad y pruebas automatizadas | P0 | TODO | OOC-002 |
 | OOC-004 | Implementar modelos y lógica central del juego | P0 | TODO | OOC-001, OOC-003 |
 | OOC-005 | Implementar salas y gestión de partidas | P0 | TODO | OOC-003, OOC-004 |
@@ -167,42 +167,44 @@
 ## OOC-002 — Crear la estructura del monorepo
 
 **Prioridad:** P0  
-**Estado:** TODO  
+**Estado:** IN_PROGRESS  
 **Dependencias:** OOC-001  
 **Objetivo:** crear un repositorio único con cliente, backend, documentación e infraestructura.
 
 ### OOC-002.1 — Crear el repositorio y su estructura base
 
 **Prioridad:** P0  
-**Estado:** TODO
+**Estado:** DONE
 
 **Criterios de aceptación:**
 
-- [ ] Existe un repositorio Git.
-- [ ] Se crean las carpetas principales para Flutter, backend, contratos, infraestructura y documentación.
-- [ ] Se configura `.gitignore` para archivos generados y secretos.
-- [ ] Se agrega un `README.md` con la estructura del proyecto.
+- [x] Existe un repositorio Git.
+- [x] Se crean las carpetas `mobile/`, `backend/` y `docs/`.
+- [x] Se configura `.gitignore` para archivos generados y secretos.
+- [x] Se agrega un `README.md` con la estructura del proyecto.
 
 ### OOC-002.2 — Inicializar el cliente React Native
 
 **Prioridad:** P0  
-**Estado:** TODO  
+**Estado:** IN_PROGRESS  
 **Dependencias:** OOC-002.1
 
 **Descripción:** inicializar la aplicación móvil de Out Of Context con React Native y TypeScript, respetando la estructura del monorepo y las decisiones arquitectónicas aprobadas.
 
-**Decisión pendiente:** elegir Expo o React Native Community CLI antes de inicializar el proyecto.
+**Decisión aprobada:** Expo con plantilla TypeScript, development builds y prebuild. El gestor de paquetes es npm.
 
 **Criterios de aceptación:**
 
-- [ ] Existe una aplicación React Native válida en `apps/mobile/`.
-- [ ] El cliente utiliza TypeScript.
+- [x] Existe una aplicación React Native válida en `mobile/`.
+- [x] El cliente utiliza TypeScript.
 - [ ] La aplicación se ejecuta en un emulador o dispositivo Android.
 - [ ] Se puede generar una compilación de desarrollo.
-- [ ] Existe una prueba básica ejecutable.
-- [ ] Se documentan los comandos de instalación, ejecución y validación.
-- [ ] Se utiliza un único gestor de paquetes y se conserva su archivo de bloqueo.
-- [ ] La configuración coincide con `docs/ARCHITECTURE.md`.
+- [x] Existe una prueba básica ejecutable.
+- [x] Se documentan los comandos de instalación, ejecución y validación.
+- [x] Se utiliza un único gestor de paquetes y se conserva su archivo de bloqueo.
+- [x] La configuración coincide con `docs/ARCHITECTURE.md`.
+
+La ejecución en Android y la compilación de desarrollo siguen abiertas: el entorno de inicialización no tiene JDK ni Android SDK. El comando previsto es `npm run android` desde `mobile/`.
 
 ### OOC-002.3 — Inicializar el backend Django
 
@@ -302,7 +304,7 @@
 **Criterios de aceptación:**
 
 - [ ] El pipeline ejecuta las comprobaciones básicas del backend.
-- [ ] El pipeline ejecuta las comprobaciones básicas de Flutter.
+- [ ] El pipeline ejecuta las comprobaciones básicas de React Native y TypeScript.
 - [ ] Los errores de análisis o pruebas hacen fallar el pipeline.
 - [ ] No se requieren secretos de producción para ejecutar las comprobaciones básicas.
 

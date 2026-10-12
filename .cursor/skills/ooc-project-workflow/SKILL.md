@@ -16,7 +16,7 @@ Keep implementation aligned with the approved Out Of Context (OOC) documents and
 - Do not invent or “improve” rules from Mimic Octopus. Preserve the approved rules exactly.
 
 ## Agreed initial stack
-- Android client: Flutter and Dart in `apps/mobile/`.
+- Android client: React Native and TypeScript in `mobile/`.
 - Backend: Django and Django REST Framework in `backend/`.
 - Realtime transport: Django Channels / WebSockets when the relevant backlog item is reached.
 - Database: PostgreSQL, configured for local development through `infra/docker-compose.yml`.

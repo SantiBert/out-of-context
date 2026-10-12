@@ -16,11 +16,9 @@ Implement the Out Of Context mobile client using React Native and TypeScript. Ke
 - Database: PostgreSQL, accessed through the backend only.
 - Real-time communication: Django Channels + WebSockets when required.
 - Repository: monorepo.
-- Mobile app directory: `apps/mobile/`.
+- Mobile app directory: `mobile/`.
 - Shared API contracts and protocol documentation: `contracts/`.
 - Architecture and project documentation: `docs/`.
-
-Do not introduce Flutter, Dart, or a second mobile framework.
 
 ## Before making changes
 
@@ -49,17 +47,17 @@ Do not replace existing configuration or generate a new application inside a pop
 
 Adapt this structure to the existing repository rather than creating empty directories unnecessarily.
 
-- `apps/mobile/src/app/`: app entry points and top-level providers.
-- `apps/mobile/src/navigation/`: navigation configuration.
-- `apps/mobile/src/screens/`: screen-level components.
-- `apps/mobile/src/components/`: reusable UI components.
-- `apps/mobile/src/features/`: feature-specific UI, state, and logic.
-- `apps/mobile/src/services/api/`: HTTP client and API functions.
-- `apps/mobile/src/services/realtime/`: WebSocket client and event handling.
-- `apps/mobile/src/types/`: shared client-side types where feature-local types are inappropriate.
-- `apps/mobile/src/utils/`: small, reusable utilities.
-- `apps/mobile/src/theme/`: design tokens and theme configuration.
-- `apps/mobile/__tests__/` or colocated test files: follow the test framework already configured.
+- `mobile/src/app/`: app entry points and top-level providers.
+- `mobile/src/navigation/`: navigation configuration.
+- `mobile/src/screens/`: screen-level components.
+- `mobile/src/components/`: reusable UI components.
+- `mobile/src/features/`: feature-specific UI, state, and logic.
+- `mobile/src/services/api/`: HTTP client and API functions.
+- `mobile/src/services/realtime/`: WebSocket client and event handling.
+- `mobile/src/types/`: shared client-side types where feature-local types are inappropriate.
+- `mobile/src/utils/`: small, reusable utilities.
+- `mobile/src/theme/`: design tokens and theme configuration.
+- `mobile/__tests__/` or colocated test files: follow the test framework already configured.
 
 Do not force every feature into every directory. Prefer cohesive feature modules over excessive abstraction.
 

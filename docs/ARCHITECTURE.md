@@ -37,8 +37,6 @@ La arquitectura prioriza:
 
 Las siguientes decisiones deben confirmarse antes de que condicionen la implementación:
 
-- Método de inicialización móvil: Expo o React Native Community CLI.
-- Gestor de paquetes JavaScript: npm, pnpm o Yarn.
 - Biblioteca de navegación.
 - Estrategia de gestión de estado del cliente.
 - Mecanismo de autenticación.
@@ -48,16 +46,43 @@ Las siguientes decisiones deben confirmarse antes de que condicionen la implemen
 
 No introducir dependencias importantes para estas decisiones sin revisar el repositorio y documentar el motivo de la elección.
 
+### Inicialización del cliente móvil
+
+**Estado:** decisión aprobada. El cliente se inicializa con Expo, plantilla TypeScript, development builds y prebuild. El gestor de paquetes del cliente es npm.
+
+El cliente hablará con Django Channels mediante el API WebSocket de JavaScript. Expo y React Native Community CLI pueden usar ese API sin un módulo nativo, así que el tiempo real no decide la herramienta.
+
+| Criterio | Expo | React Native Community CLI |
+|---|---|---|
+| Desarrollo Android | `prebuild` genera el proyecto Android y el flujo de Expo lo ejecuta. Hacen falta JDK, Android SDK y un emulador o dispositivo. | El directorio `android/` y Gradle entran al repositorio desde el primer día. También hacen falta JDK, Android SDK y un emulador o dispositivo. |
+| Configuración nativa | Permisos, red y módulos nativos habituales se cubren con config plugins y un development build. | La configuración se edita en el proyecto Android. |
+| Dependencias | El SDK de Expo alinea React Native y las bibliotecas compatibles. | Cada biblioteca se versiona por separado. |
+| Builds | La compilación local usa Gradle después de `prebuild`. EAS Build puede usarse y no es obligatorio. | La compilación local usa Gradle desde el inicio. |
+| Pruebas | Jest y React Native Testing Library cubren el cliente TypeScript. | Jest y React Native Testing Library cubren el cliente TypeScript. |
+| Mantenimiento | El producto actual son pantallas, HTTP y tiempo real. El proyecto nativo se regenera mientras no haya una personalización nativa propia. | El equipo mantiene Gradle y el proyecto Android aunque todavía no exista un módulo nativo propio. |
+| Complejidad operativa | Menor mientras la aplicación no requiera conservar un proyecto nativo modificado a mano. | Mayor desde el primer día, por el mantenimiento del proyecto Android. |
+
+Expo encaja con el alcance actual: una aplicación Android nueva, sin código nativo previo y sin un módulo nativo identificado. El acceso nativo posterior sigue disponible con config plugins, `expo prebuild` y un development build.
+
+**Consecuencias de la decisión aprobada:**
+
+- Se utiliza únicamente Expo.
+- La inicialización usa la plantilla TypeScript dentro de `mobile/`.
+- El gestor de paquetes del cliente es npm. Se conserva `package-lock.json`.
+- El directorio `android/` se genera con `prebuild`. Se mantiene a mano solo cuando una necesidad nativa posterior lo requiera. Los directorios generados `mobile/android/` y `mobile/ios/` no se versionan.
+- La navegación, el estado del cliente y la autenticación siguen abiertos.
+- El entorno de desarrollo continuo es un development build. Expo Go queda limitado a las dependencias incluidas en su runtime.
+- EAS Build no forma parte del entorno local obligatorio.
+
 ## 3. Estructura del monorepo
 
 La estructura objetivo es:
 
     .
-    ├── apps/
-    │   └── mobile/
-    │       ├── src/
-    │       ├── package.json
-    │       └── ...
+    ├── mobile/
+    │   ├── src/
+    │   ├── package.json
+    │   └── ...
     ├── backend/
     │   ├── manage.py
     │   ├── config/
@@ -84,7 +109,7 @@ La estructura es una referencia arquitectónica, no una instrucción para recrea
 
 ### Responsabilidades por directorio
 
-**`apps/mobile/`**
+**`mobile/`**
 
 Contiene la aplicación React Native, la interfaz, la navegación, el estado local, los clientes HTTP y la integración WebSocket.
 
@@ -218,7 +243,7 @@ La aplicación móvil se implementa con React Native y TypeScript.
 
 Como organización inicial se propone:
 
-    apps/mobile/src/
+    mobile/src/
     ├── app/
     ├── navigation/
     ├── screens/
@@ -556,7 +581,7 @@ La estrategia de pruebas se distribuye entre cliente y backend.
 - Finalización de partida.
 - Recuperación del estado después de una desconexión.
 
-Los comandos concretos deben corresponder a las herramientas configuradas en los manifiestos del proyecto. No ejecutar comandos de Flutter o Dart.
+Los comandos concretos deben corresponder a las herramientas configuradas en los manifiestos del proyecto.
 
 ## 17. Observabilidad y errores
 

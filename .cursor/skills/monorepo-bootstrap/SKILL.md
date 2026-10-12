@@ -16,11 +16,10 @@ The repository must support local development, automated testing, clear separati
 Use this as the target structure, adapting it to the existing repository when necessary.
 
     .
-    ├── apps/
-    │   └── mobile/
-    │       ├── src/
-    │       ├── package.json
-    │       └── ...
+    ├── mobile/
+    │   ├── src/
+    │   ├── package.json
+    │   └── ...
     ├── backend/
     │   ├── manage.py
     │   ├── config/
@@ -55,8 +54,6 @@ Do not create placeholder files or directories without a concrete purpose. Prese
 - API and event contracts: documented under `contracts/`.
 - Version control: Git.
 
-Do not introduce Flutter, Dart, a second mobile framework, or a second backend framework.
-
 Do not assume Expo, React Native Community CLI, a JavaScript package manager, or a dependency-management tool has already been selected. Inspect the repository and existing decisions first. If a choice is necessary but undocumented, present the options and their trade-offs before making a major architectural change.
 
 ## Initial audit
@@ -74,7 +71,7 @@ Never overwrite user work merely to match the target structure.
 
 ## Mobile application
 
-The mobile app must live under `apps/mobile/`.
+The mobile app must live under `mobile/`.
 
 - Use React Native and TypeScript.
 - Keep mobile-specific dependencies and scripts in the mobile package unless the repository explicitly uses workspace-level tooling.

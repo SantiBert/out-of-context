@@ -28,7 +28,7 @@ Testing must protect the game's rules, hidden information, simultaneous voting, 
 
 ### 1. Static analysis and formatting
 
-For the mobile app, run the scripts configured in `apps/mobile/package.json`. Typical checks include:
+For the mobile app, run the scripts configured in `mobile/package.json`. Typical checks include:
 
 - TypeScript type checking.
 - ESLint.
@@ -98,8 +98,6 @@ The mobile app is React Native + TypeScript.
 - Test that hidden card information is not rendered or retained unnecessarily.
 - Check that UI controls cannot advance phases without server authorization.
 - Verify that relevant Android builds succeed when the local environment supports them.
-
-Do not use Flutter or Dart commands.
 
 Do not assume Expo commands, Community CLI commands, Jest, or another test runner are available until the project configuration confirms them.
 

@@ -1,0 +1,53 @@
+# Secretos y entorno
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+credentials.json
+
+# Node y React Native
+node_modules/
+.expo/
+.expo-shared/
+dist/
+web-build/
+*.jsbundle
+.metro-health-check*
+.metro-cache/
+*.tsbuildinfo
+coverage/
+.eslintcache
+
+# Compilación nativa de React Native
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+mobile/android/
+mobile/ios/
+*.apk
+*.aab
+*.hprof
+
+# Python y Django
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+db.sqlite3
+db.sqlite3-journal
+staticfiles/

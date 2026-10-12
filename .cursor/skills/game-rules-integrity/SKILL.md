@@ -3,7 +3,8 @@ name: game-rules-integrity
 description: Preserve the approved Out Of Context game rules when documenting, implementing, testing, or reviewing role assignment, rounds, voting, and scoring.
 paths:
   - "backend/**/*.py"
-  - "apps/mobile/**/*.dart"
+  - "mobile/**/*.ts"
+  - "mobile/**/*.tsx"
   - "contracts/**"
   - "docs/GAME_DESIGN_DOCUMENT.md"
 ---
