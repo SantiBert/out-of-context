@@ -55,8 +55,8 @@
 |---|---|---|---|---|
 | OOC-001 | Documentar y validar las reglas del juego | P0 | IN_PROGRESS | Ninguna |
 | OOC-002 | Crear la estructura del monorepo | P0 | IN_PROGRESS | OOC-001 |
-| OOC-003 | Configurar entornos, calidad y pruebas automatizadas | P0 | TODO | OOC-002 |
-| OOC-004 | Implementar modelos y lógica central del juego | P0 | TODO | OOC-001, OOC-003 |
+| OOC-003 | Configurar entornos, calidad y pruebas automatizadas | P0 | IN_PROGRESS | OOC-002 |
+| OOC-004 | Implementar modelos y lógica central del juego | P0 | DONE | OOC-001, OOC-003 |
 | OOC-005 | Implementar salas y gestión de partidas | P0 | TODO | OOC-003, OOC-004 |
 | OOC-006 | Implementar comunicación en tiempo real | P0 | TODO | OOC-005 |
 | OOC-007 | Implementar el flujo de una ronda | P0 | TODO | OOC-004, OOC-006 |
@@ -197,8 +197,8 @@
 
 - [x] Existe una aplicación React Native válida en `mobile/`.
 - [x] El cliente utiliza TypeScript.
-- [ ] La aplicación se ejecuta en un emulador o dispositivo Android.
-- [ ] Se puede generar una compilación de desarrollo.
+- [x] La aplicación se ejecuta en un emulador o dispositivo Android.
+- [ x] Se puede generar una compilación de desarrollo.
 - [x] Existe una prueba básica ejecutable.
 - [x] Se documentan los comandos de instalación, ejecución y validación.
 - [x] Se utiliza un único gestor de paquetes y se conserva su archivo de bloqueo.
@@ -209,30 +209,30 @@ La ejecución en Android y la compilación de desarrollo siguen abiertas: el ent
 ### OOC-002.3 — Inicializar el backend Django
 
 **Prioridad:** P0  
-**Estado:** TODO  
+**Estado:** DONE  
 **Dependencias:** OOC-002.1
 
 **Criterios de aceptación:**
 
-- [ ] Existe un proyecto Django con `manage.py`.
-- [ ] Django REST Framework está instalado y configurado.
-- [ ] Existe un endpoint de salud.
-- [ ] El servidor puede iniciarse siguiendo las instrucciones documentadas.
-- [ ] Existe una prueba automatizada del endpoint de salud.
+- [x] Existe un proyecto Django con `manage.py`.
+- [x] Django REST Framework está instalado y configurado.
+- [x] Existe un endpoint de salud.
+- [x] El servidor puede iniciarse siguiendo las instrucciones documentadas.
+- [x] Existe una prueba automatizada del endpoint de salud.
 
 ### OOC-002.4 — Preparar PostgreSQL para desarrollo
 
 **Prioridad:** P1  
-**Estado:** TODO  
+**Estado:** IN_PROGRESS  
 **Dependencias:** OOC-002.3
 
 **Criterios de aceptación:**
 
-- [ ] PostgreSQL puede ejecutarse localmente.
+- [x] PostgreSQL puede ejecutarse localmente.
 - [ ] Django puede conectarse a la base de datos.
 - [ ] Las migraciones iniciales se ejecutan correctamente.
-- [ ] Las credenciales se configuran mediante variables de entorno.
-- [ ] No se incluyen credenciales reales en Git.
+- [x] Las credenciales se configuran mediante variables de entorno.
+- [x] No se incluyen credenciales reales en Git.
 
 ### OOC-002.5 — Preparar Django Channels
 
@@ -255,115 +255,167 @@ La ejecución en Android y la compilación de desarrollo siguen abiertas: el ent
 
 **Criterios de aceptación:**
 
-- [ ] Se documenta cómo instalar y ejecutar el cliente.
-- [ ] Se documenta cómo instalar, ejecutar y probar el backend.
+- [x] Se documenta cómo instalar y ejecutar el cliente.
+- [x] Se documenta cómo instalar, ejecutar y probar el backend.
 - [ ] Se define dónde documentar los contratos HTTP y WebSocket.
-- [ ] Se documenta la configuración necesaria para el entorno local.
+- [x] Se documenta la configuración necesaria para el entorno local.
 
 ---
 
 ## OOC-003 — Configurar entornos, calidad y pruebas automatizadas
 
 **Prioridad:** P0  
-**Estado:** TODO  
+**Estado:** IN_PROGRESS  
 **Dependencias:** OOC-002  
 **Objetivo:** establecer un flujo de desarrollo reproducible y detectar errores antes de integrar funcionalidades.
 
 ### OOC-003.1 — Configurar herramientas de calidad para React Native y TypeScript
 
 **Prioridad:** P1  
-**Estado:** TODO  
+**Estado:** DONE  
 **Dependencias:** OOC-002.2
 
 **Criterios de aceptación:**
 
-- [ ] Se configura la comprobación de tipos de TypeScript.
-- [ ] Se configura ESLint o una herramienta equivalente de linting.
-- [ ] Se documentan los comandos de análisis, formato y pruebas.
-- [ ] Existe una prueba básica del cliente móvil.
-- [ ] Se documentan las convenciones de nombres, estructura y componentes.
-- [ ] Los comandos definidos coinciden con los scripts reales del proyecto.
+- [x] Se configura la comprobación de tipos de TypeScript.
+- [x] Se configura ESLint o una herramienta equivalente de linting.
+- [x] Se documentan los comandos de análisis, formato y pruebas.
+- [x] Existe una prueba básica del cliente móvil.
+- [x] Se documentan las convenciones de nombres, estructura y componentes.
+- [x] Los comandos definidos coinciden con los scripts reales del proyecto.
 
 ### OOC-003.2 — Configurar herramientas de calidad para Python
 
 **Prioridad:** P1  
-**Estado:** TODO
+**Estado:** DONE
 
 **Criterios de aceptación:**
 
-- [ ] Se configura una herramienta de linting y formato.
-- [ ] Se documenta cómo ejecutar las pruebas del backend.
-- [ ] Se documenta cómo comprobar las migraciones.
-- [ ] Se definen convenciones de código Python.
+- [x] Se configura una herramienta de linting y formato.
+- [x] Se documenta cómo ejecutar las pruebas del backend.
+- [x] Se documenta cómo comprobar las migraciones.
+- [x] Se definen convenciones de código Python.
 
 ### OOC-003.3 — Preparar integración continua
 
 **Prioridad:** P1  
-**Estado:** TODO
+**Estado:** DONE
 
 **Criterios de aceptación:**
 
-- [ ] El pipeline ejecuta las comprobaciones básicas del backend.
-- [ ] El pipeline ejecuta las comprobaciones básicas de React Native y TypeScript.
-- [ ] Los errores de análisis o pruebas hacen fallar el pipeline.
-- [ ] No se requieren secretos de producción para ejecutar las comprobaciones básicas.
+- [x] El pipeline ejecuta las comprobaciones básicas del backend.
+- [x] El pipeline ejecuta las comprobaciones básicas de React Native y TypeScript.
+- [x] Los errores de análisis o pruebas hacen fallar el pipeline.
+- [x] No se requieren secretos de producción para ejecutar las comprobaciones básicas.
+
+### OOC-003.4 — Dockerizar el backend e integrarlo con PostgreSQL
+
+**Prioridad:** P1  
+**Estado:** IN_PROGRESS
+
+**Criterios de aceptación:**
+
+- [x] El Dockerfile y el Compose son válidos, y la imagen del backend se construye.
+- [ ] Django se conecta a PostgreSQL desde el contenedor.
+- [ ] Las migraciones se ejecutan desde el contenedor.
+- [ ] El health check responde cuando Postgres y el backend están disponibles.
+- [x] Las instrucciones de construcción, arranque, logs, migraciones, pruebas y parada están documentadas.
+- [x] La imagen y el repositorio no incluyen secretos reales.
+
+La imagen se construyó y `docker compose run --rm backend python manage.py test` pasó. `migrate` llegó al servicio `postgres` y falló la autenticación del volumen existente. El servicio `backend` no publicó `127.0.0.1:8000` porque ese puerto ya estaba ocupado. No se borró `postgres_data`.
 
 ---
 
 ## OOC-004 — Implementar modelos y lógica central del juego
 
 **Prioridad:** P0  
-**Estado:** TODO  
+**Estado:** DONE  
 **Dependencias:** OOC-001, OOC-003  
 **Objetivo:** implementar las reglas del juego de forma independiente de la interfaz.
 
 ### OOC-004.1 — Modelar cartas y situaciones
 
 **Prioridad:** P0  
-**Estado:** TODO
+**Estado:** DONE
 
 **Criterios de aceptación:**
 
-- [ ] Existe un modelo de carta con identificador, número y texto.
-- [ ] Se pueden representar las tres copias de una carta.
-- [ ] Se puede determinar qué cartas se repartieron en una ronda.
-- [ ] Las cartas no repartidas no afectan la determinación de roles.
+- [x] Existe un modelo de carta con identificador, número y texto.
+- [x] Se pueden representar las tres copias de una carta.
+- [x] Se puede determinar qué cartas se repartieron en una ronda.
+- [x] Las cartas no repartidas no afectan la determinación de roles.
 
 ### OOC-004.2 — Modelar jugadores, equipos y roles
 
 **Prioridad:** P0  
-**Estado:** TODO  
+**Estado:** DONE  
 **Dependencias:** OOC-004.1
 
 **Criterios de aceptación:**
 
-- [ ] Se representa cada jugador de una ronda.
-- [ ] Se determinan los equipos mediante coincidencias de cartas.
-- [ ] Se identifican los impostores.
-- [ ] Se permiten cero, uno o varios impostores.
-- [ ] Se contemplan equipos de dos y tres integrantes.
+- [x] Se representa cada jugador de una ronda.
+- [x] Se determinan los equipos mediante coincidencias de cartas.
+- [x] Se identifican los impostores.
+- [x] Se permiten cero, uno o varios impostores.
+- [x] Se contemplan equipos de dos y tres integrantes.
 
 ### OOC-004.3 — Implementar la preparación de rondas
 
 **Prioridad:** P0  
-**Estado:** TODO  
+**Estado:** DONE  
 **Dependencias:** OOC-004.1
 
 **Criterios de aceptación:**
 
-- [ ] Se seleccionan 3 pilas para partidas de 4 a 6 jugadores.
-- [ ] Se seleccionan 4 pilas para partidas de 7 a 8 jugadores.
-- [ ] Las cartas seleccionadas se mezclan antes del reparto.
-- [ ] Cada jugador recibe exactamente una carta.
-- [ ] Se conservan las cartas restantes para el descarte.
-- [ ] No se reutilizan pilas consumidas.
+- [x] Se seleccionan 3 pilas para partidas de 4 a 6 jugadores.
+- [x] Se seleccionan 4 pilas para partidas de 7 a 8 jugadores.
+- [x] Las cartas seleccionadas se mezclan antes del reparto.
+- [x] Cada jugador recibe exactamente una carta.
+- [x] Se conservan las cartas restantes para el descarte.
+- [x] No se reutilizan pilas consumidas.
 
 ### OOC-004.4 — Implementar las reglas de puntuación
 
 **Prioridad:** P0  
-**Estado:** TODO  
+**Estado:** DONE  
 **Dependencias:** OOC-004.2, OOC-001.6
+
+La fórmula recíproca quedó confirmada: un compañero cuenta si su señalamiento incluye al jugador, aunque su identificación no sea completa. OOC-001.6 sigue abierta por el resto de decisiones del reglamento. No hay flujo de votación en tiempo real ni pantallas.
 
 **Criterios de aceptación:**
 
-- [ ] Se valida que los miembros del equipo identifiquen a todos
+- [x] Se valida que un jugador de equipo señale a todos sus compañeros y a ningún ajeno.
+- [x] Si cumple esa condición, suma un punto por cada compañero que lo señaló, aunque el voto de ese compañero sea incompleto.
+- [x] Un impostor con puño obtiene 1 punto. Si no es impostor, obtiene 0.
+- [x] Un impostor con V obtiene 1 punto más uno por cada jugador que lo señaló, si al menos uno lo hizo. Si nadie lo señaló, obtiene 0.
+- [x] Un jugador que no es impostor y elige puño o V obtiene 0.
+- [x] Un voto con jugador inválido, gesto no permitido o auto-señalamiento se rechaza.
+- [x] Los mismos votos y roles producen el mismo resultado.
+- [x] Procesar otra vez la misma ronda no duplica los puntos.
+- [x] El cálculo no depende de endpoints ni de la interfaz.
+
+### OOC-004.6 — Validar las reglas y los casos límite
+
+**Prioridad:** P0  
+**Estado:** DONE  
+**Dependencias:** OOC-004.1, OOC-004.2, OOC-004.3, OOC-004.4
+
+La verificación no cambió las reglas. Ruff, `manage.py check`, `makemigrations --check` y `manage.py test` pasaron: 93 pruebas. El dominio no importa REST, Channels ni React Native.
+
+**Criterios de aceptación:**
+
+- [x] Hay pruebas para 4, 5, 6, 7 y 8 jugadores, incluidos pilas, reparto y descarte.
+- [x] Se rechazan menos de 4, más de 8 y los valores booleanos. Una partida terminada no queda con 3 jugadores.
+- [x] No se vuelven a guardar pilas, no se reutiliza una pila consumida y una copia descartada no se reparte en la misma ronda.
+- [x] Hay equipos de dos, equipos de tres, rondas sin impostores, un impostor y varios impostores con cartas distintas.
+- [x] La tabla de puntuación y las operaciones repetidas de reparto, votos y premios siguen cubiertas.
+- [x] Los casos que esta épica no implementa quedan enumerados abajo.
+
+Quedan fuera de OOC-004, sin servicio que cambiar:
+
+- El cierre de la conversación cuando más de la mitad está listo, y su continuación en caso contrario.
+- Marcar la partida como terminada al agotar las pilas, y elegir a todos los jugadores empatados en la puntuación máxima. `start_round` solo impide preparar otra ronda.
+- Avanzar una ronda a `voting` o `finished`.
+- Impedir una ronda nueva mientras la anterior sigue abierta.
+
+Siguen abiertas las decisiones del reglamento sobre el reparto digital, la conversación, la revelación simultánea y los detalles de impostor que el texto no incluye. OOC-001.6 no se cierra con esta historia.

@@ -226,6 +226,8 @@ Si omite a un compañero o señala a una persona ajena a su equipo, obtiene cero
 
 **Ejemplo:** A, B y C forman un equipo. A señala correctamente a B y C. B también señala a A, pero C no lo reconoce. A obtiene un punto porque solo B lo reconoció correctamente.
 
+Un compañero cuenta como reconocimiento si su señalamiento incluye a ese jugador, aunque su propia identificación esté incompleta o incluya a alguien ajeno. El puño y la V no señalan a nadie. En el ejemplo, B no necesita haber señalado también a C para que A reciba ese punto.
+
 La puntuación depende de las decisiones de ambos jugadores, no solamente de que A haya identificado correctamente al equipo.
 
 ### 10.2. Impostores: jugar seguro
@@ -346,7 +348,7 @@ Este documento recoge las reglas que se han podido reconstruir a partir del regl
 1. **Distribución de cartas:** confirmar que la selección de pilas y el reparto aleatorio pueden representarse digitalmente sin cambiar las probabilidades del juego físico.
 2. **Interfaz de conversación:** definir cómo se representa la conversación en partidas presenciales y remotas. La interfaz no debe revelar información secreta.
 3. **Votación digital:** definir cómo se registran las decisiones y se revelan simultáneamente en partidas remotas.
-4. **Condición de puntuación del equipo:** confirmar que la regla de reconocimiento recíproco se interpreta como está documentada, incluidos los equipos de dos y tres miembros.
+4. **Condición de puntuación del equipo:** resuelta. Un compañero cuenta si su señalamiento incluye al jugador, aunque la identificación de ese compañero esté incompleta o incluya a alguien ajeno. Vale para equipos de dos y de tres.
 5. **Estrategias del impostor:** verificar cualquier detalle adicional del reglamento original que no esté incluido en el texto disponible.
 
 Las decisiones de arquitectura, conectividad, persistencia y seguridad se documentarán por separado en `docs/ARCHITECTURE.md`. Las tareas de implementación se gestionarán en `docs/BACKLOG.md`.
