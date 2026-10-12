@@ -1,10 +1,10 @@
 # Out Of Context — Product Backlog
 
-**Versión:** 0.1  
+**Versión:** 0.2  
 **Estado:** En desarrollo  
 **Proyecto:** Out Of Context  
 **Plataforma inicial:** Android  
-**Frontend:** Flutter / Dart  
+**Frontend:** React Native + TypeScript  
 **Backend:** Python / Django REST Framework  
 **Tiempo real:** Django Channels / WebSockets  
 **Base de datos:** PostgreSQL  
@@ -61,7 +61,7 @@
 | OOC-006 | Implementar comunicación en tiempo real | P0 | TODO | OOC-005 |
 | OOC-007 | Implementar el flujo de una ronda | P0 | TODO | OOC-004, OOC-006 |
 | OOC-008 | Implementar votación y puntuación | P0 | TODO | OOC-004, OOC-007 |
-| OOC-009 | Implementar la interfaz principal en Flutter | P0 | TODO | OOC-002, OOC-001 |
+| OOC-009 | Implementar la interfaz principal en React Native | P0 | TODO | OOC-002, OOC-001 |
 | OOC-010 | Integrar cliente y backend | P0 | TODO | OOC-005, OOC-006, OOC-009 |
 | OOC-011 | Implementar el cierre y los resultados de la partida | P1 | TODO | OOC-008, OOC-010 |
 | OOC-012 | Validar el MVP mediante pruebas integrales | P0 | TODO | OOC-010, OOC-011 |
@@ -183,18 +183,26 @@
 - [ ] Se configura `.gitignore` para archivos generados y secretos.
 - [ ] Se agrega un `README.md` con la estructura del proyecto.
 
-### OOC-002.2 — Inicializar el cliente Flutter
+### OOC-002.2 — Inicializar el cliente React Native
 
 **Prioridad:** P0  
 **Estado:** TODO  
 **Dependencias:** OOC-002.1
 
+**Descripción:** inicializar la aplicación móvil de Out Of Context con React Native y TypeScript, respetando la estructura del monorepo y las decisiones arquitectónicas aprobadas.
+
+**Decisión pendiente:** elegir Expo o React Native Community CLI antes de inicializar el proyecto.
+
 **Criterios de aceptación:**
 
-- [ ] Existe una aplicación Flutter válida en `apps/mobile/`.
+- [ ] Existe una aplicación React Native válida en `apps/mobile/`.
+- [ ] El cliente utiliza TypeScript.
 - [ ] La aplicación se ejecuta en un emulador o dispositivo Android.
-- [ ] Se puede compilar una versión de desarrollo.
+- [ ] Se puede generar una compilación de desarrollo.
 - [ ] Existe una prueba básica ejecutable.
+- [ ] Se documentan los comandos de instalación, ejecución y validación.
+- [ ] Se utiliza un único gestor de paquetes y se conserva su archivo de bloqueo.
+- [ ] La configuración coincide con `docs/ARCHITECTURE.md`.
 
 ### OOC-002.3 — Inicializar el backend Django
 
@@ -259,17 +267,20 @@
 **Dependencias:** OOC-002  
 **Objetivo:** establecer un flujo de desarrollo reproducible y detectar errores antes de integrar funcionalidades.
 
-### OOC-003.1 — Configurar herramientas de calidad para Flutter
+### OOC-003.1 — Configurar herramientas de calidad para React Native y TypeScript
 
 **Prioridad:** P1  
-**Estado:** TODO
+**Estado:** TODO  
+**Dependencias:** OOC-002.2
 
 **Criterios de aceptación:**
 
-- [ ] Se configura el análisis estático de Dart.
-- [ ] Se documenta el comando para ejecutar el analizador.
-- [ ] Se documenta el comando para ejecutar las pruebas.
-- [ ] Se definen convenciones básicas de nombres y formato.
+- [ ] Se configura la comprobación de tipos de TypeScript.
+- [ ] Se configura ESLint o una herramienta equivalente de linting.
+- [ ] Se documentan los comandos de análisis, formato y pruebas.
+- [ ] Existe una prueba básica del cliente móvil.
+- [ ] Se documentan las convenciones de nombres, estructura y componentes.
+- [ ] Los comandos definidos coinciden con los scripts reales del proyecto.
 
 ### OOC-003.2 — Configurar herramientas de calidad para Python
 
