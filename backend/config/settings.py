@@ -49,8 +49,10 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
+    "drf_spectacular",
     "health",
     "games",
+    "rooms",
 ]
 
 MIDDLEWARE = [
@@ -98,6 +100,10 @@ if "test" in sys.argv:
     DATABASES["default"] = {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": ":memory:",
+        # A file lets a second writer wait. The shared in-memory database
+        # returns "database table is locked" immediately.
+        "TEST": {"NAME": BASE_DIR / "test.sqlite3"},
+        "OPTIONS": {"timeout": 5, "transaction_mode": "IMMEDIATE"},
     }
 
 
@@ -149,4 +155,13 @@ MAILERS = {
     "default": {
         "BACKEND": "django.core.mail.backends.console.EmailBackend",
     },
+}
+
+REST_FRAMEWORK = {
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Out Of Context",
+    "VERSION": "0.1.0",
 }

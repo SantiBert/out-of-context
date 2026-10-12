@@ -38,7 +38,8 @@ Este archivo es solo del servidor. La URL que usa la aplicación móvil está en
 
 - `SituationCard` guarda el número y el texto. No hay un catálogo cargado: el reglamento solo incluye cuatro ejemplos, no las 15 o 16 cartas.
 - `CardCopy` representa las tres copias de un tipo, con índice 1, 2 o 3.
-- `Participant` es un nombre único dentro de la partida. No hay `User` ni sala: la autenticación sigue abierta.
+- `Participant` es un nombre único dentro de la partida. No hay `User`: la autenticación sigue abierta.
+- `Room` es una sala distinta de la partida. Nace en `waiting` con un código de invitación único. `RoomMember` guarda el nombre visible y marca al creador como único anfitrión. Otro participante se incorpora con ese código mientras la sala espera, hasta 8 nombres distintos. Puede irse; el anfitrión no. La consulta devuelve ese estado público y no una partida. El anfitrión puede iniciar: se crea un `Game` en `preparing`, sin pilas ni ronda, y la sala pasa a `started`. No hay login ni endpoint de salas.
 - `Game` usa `preparing`, `in_progress` y `finished`. Sale de la preparación con 4 a 8 participantes.
 - `Round` usa `prepared`, `conversation`, `voting` y `finished`. La lista de diez fases de la arquitectura no se adoptó porque incluye la sala.
 - `RoundPile` guarda también la partida para que un tipo de carta no se consuma dos veces en ella.
@@ -166,3 +167,12 @@ Respuesta `200`:
 ```
 
 No requiere autenticación y no consulta la base de datos. Sirve para comprobar que el proceso responde.
+
+## Swagger
+
+Con el servidor en marcha:
+
+- `GET http://127.0.0.1:8000/api/schema/` devuelve el contrato OpenAPI.
+- `GET http://127.0.0.1:8000/api/schema/swagger-ui/` muestra Swagger.
+
+Hoy el contrato documenta el health check y las salas: crear, consultar y unirse. Salir e iniciar no tienen ruta. No requiere autenticación. La interfaz carga sus archivos desde una CDN.

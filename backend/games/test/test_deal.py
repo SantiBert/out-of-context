@@ -14,7 +14,7 @@ from games.deck import (
     start_round,
 )
 from games.models import Game, Participant, Round
-from games.test_deck import make_cards, make_players, prepared_game
+from games.test.test_deck import make_cards, make_players, prepared_game
 
 
 def assignment(round_):

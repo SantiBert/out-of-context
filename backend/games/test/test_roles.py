@@ -14,7 +14,7 @@ from games.models import (
     SituationCard,
 )
 from games.roles import InvalidClassification, classify_hands, classify_round
-from games.test_deck import prepared_game
+from games.test.test_deck import prepared_game
 
 
 class ClassifyHandsTests(SimpleTestCase):

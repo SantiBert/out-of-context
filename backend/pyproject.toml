@@ -8,4 +8,4 @@ exclude = [".venv"]
 select = ["E", "F", "I"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["config", "health"]
+known-first-party = ["config", "health", "rooms"]

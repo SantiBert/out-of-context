@@ -277,23 +277,11 @@ El siguiente modelo es conceptual. No constituye todavía un esquema definitivo 
 
 ### Room
 
-Representa una sala donde los jugadores pueden reunirse.
-
-Posibles responsabilidades:
-
-- Identificador de sala.
-- Estado de la sala.
-- Participantes.
-- Configuración admitida.
-- Referencia a la partida activa, si corresponde.
+La sala es una entidad distinta de la partida. `Room` guarda un identificador interno y un código de invitación único, y nace en `waiting`. No es un `Game` en `preparing`. Crear una sala no reparte cartas ni abre una ronda.
 
 ### Player / RoomParticipant
 
-Representa la identidad del participante dentro de una sala o partida.
-
-Debe distinguir entre la identidad autenticada y la identidad de juego cuando sea necesario.
-
-La autorización debe comprobar que el jugador tiene derecho a realizar la operación solicitada.
+`RoomMember` es quien está en la sala. Se identifica por un nombre visible, único dentro de esa sala. El creador es el único anfitrión. `Participant` sigue siendo el jugador de una partida y no se reutiliza aquí porque exige un `Game`. No hay `User` ni login. Django incluye `auth`, pero el juego no lo usa.
 
 ### Game
 
@@ -331,34 +319,50 @@ La estrategia definitiva debe evitar que una misma ronda puntúe dos veces.
 
 ## 8. Ciclo de vida de una partida
 
-El backend debe administrar explícitamente las fases del juego.
+**Estado:** decisión aprobada para los estados de `Game` y `Round`, para crear una sala en `waiting`, para unirse o salir mientras espera, para consultar ese estado y para que el anfitrión inicie la partida. La entrada con la partida ya iniciada, el resto de operaciones exclusivas del anfitrión y la autenticación no están aprobadas.
 
-Las fases iniciales propuestas son:
+La lista anterior de diez fases mezclaba la sala con la ronda. Los nombres que usa el dominio son los de los modelos. El servidor decide las transiciones. Una operación repetida no duplica efectos. Una vista pública no incluye la carta ni el rol.
 
-1. Sala abierta.
-2. Preparación de partida.
-3. Ronda preparada.
-4. Reparto completado.
-5. Conversación.
-6. Cierre de conversación.
-7. Votación.
-8. Revelación de cartas y resultados.
-9. Ronda finalizada.
-10. Partida finalizada.
+### Partida
 
-Los nombres y las transiciones exactas deben mantenerse alineados con `GAME_DESIGN_DOCUMENT.md`.
+`Game` tiene tres estados:
 
-### Reglas de transición
+| Estado | Significado |
+|---|---|
+| `preparing` | La partida admite participantes y todavía no está en juego. Puede tener menos de 4 jugadores. |
+| `in_progress` | La partida está en juego. |
+| `finished` | La partida ha terminado. |
 
-- Solo las transiciones permitidas pueden ejecutarse.
-- Una operación repetida no debe duplicar efectos.
-- Las operaciones críticas deben ser atómicas cuando corresponda.
-- Las acciones de jugadores que no participan o no tienen permiso deben rechazarse.
-- Las transiciones y los resultados oficiales los decide el servidor.
-- Una reconexión no debe reiniciar ni modificar una ronda.
-- Las actualizaciones públicas no deben revelar información secreta.
+En `preparing` no se admite un noveno participante. `in_progress` y `finished` exigen entre 4 y 8. El nombre de cada participante es único dentro de la partida.
 
-Cuando se implementen las transiciones, conviene centralizarlas en servicios de dominio y cubrirlas con pruebas.
+`start_game` crea la partida en `preparing` y no la pasa a `in_progress`. Ningún servicio pasa todavía la partida a `in_progress` o a `finished`. El reglamento dice que, después de puntuar, se prepara otra ronda si quedan pilas y, si no quedan, la partida termina. Gana quien tenga más puntos. Si varios comparten ese máximo, comparten la victoria. `start_round` rechaza otra ronda cuando no hay pilas suficientes, pero no marca `finished` ni elige ganador. Eso corresponde a OOC-011.
+
+### Ronda
+
+`Round` tiene cuatro estados:
+
+| Estado | Significado |
+|---|---|
+| `prepared` | Las pilas de la ronda ya se eligieron y todavía no se repartieron. |
+| `conversation` | Cada participante tiene una carta. |
+| `voting` | Estado persistido, sin servicio que lo alcance. |
+| `finished` | Estado persistido, sin servicio que lo alcance. |
+
+El reparto exige `prepared` y pasa la ronda a `conversation`. Un segundo reparto no añade manos ni descartes. `start_round` crea la ronda en `prepared` y no crea otra si ya se alcanzó el máximo o no quedan pilas. Aplicar la puntuación no cambia el estado.
+
+El cierre de la conversación, el paso a `voting` o `finished`, y la prohibición de abrir una ronda mientras la anterior sigue abierta no tienen servicio. Corresponden a OOC-007.
+
+### Sala y anfitrión
+
+**Estado:** decisión aprobada para la creación, la incorporación, la salida, la consulta y el inicio. La sala no es la partida. `create_room` la deja en `waiting`, le asigna un código que no se repite y registra al creador como único anfitrión y miembro. `join_room` admite a otro participante con el código, recortado y en mayúsculas, mientras la sala sigue en `waiting`. El nombre se normaliza igual que al crear y no puede repetirse. El tope es 8, el mismo de la partida, y se comprueba con la sala bloqueada. `leave_room` quita a un participante y la sala sigue en `waiting`. El anfitrión no puede irse, así que la sala no queda vacía. Cuando la sala ya empezó, tampoco se borra a nadie.
+
+`get_room_state` devuelve el código, el estado, el anfitrión, los participantes y la cantidad. Admite incorporaciones si está en `waiting` y hay menos de 8. Puede empezar si está en `waiting` y hay entre 4 y 8. Quien tiene el código ve la misma representación: no hay autenticación. La respuesta no incluye la clave interna ni cartas, roles o votos.
+
+`POST /api/rooms/`, `GET /api/rooms/{code}/` y `POST /api/rooms/{code}/members/` delegan en esos servicios. No hay ruta para salir ni para iniciar: el nombre que enviaría el cliente ya es público y no demuestra quién llama. El contrato está en `contracts/api/rooms.md`.
+
+`start_game` solo acepta el nombre del anfitrión. Con la sala bloqueada, exige `waiting` y entre 4 y 8 miembros, crea un `Game` en `preparing` y un `Participant` por miembro, guarda esa partida en la sala y la pasa a `started`. Otra llamada del anfitrión devuelve la misma partida. No llama a `create_piles`: no hay catálogo de 15 o 16 situaciones y el reglamento no dice qué carta se omite entre 4 y 6 jugadores. Tampoco llama a `prepare_round`. Esa preparación de la primera ronda queda en OOC-007, cuando las pilas existan.
+
+El reglamento no reserva el resto de las acciones de juego a una sola persona. Indicar que se está listo o declarar el cierre cuando ya hay mayoría sigue siendo una regla de ronda de OOC-007, no un privilegio del anfitrión. Qué otras operaciones serían solo del anfitrión, la entrada con la partida ya iniciada y el acceso tardío siguen abiertos. La reconexión no reinicia ni modifica una ronda. Reconocer al mismo participante después de desconectarse requiere una identidad que todavía no existe, así que no hay controles de autenticación.
 
 ## 9. Reglas de cartas y roles
 
@@ -451,7 +455,7 @@ Cada contrato debe especificar:
 - Efectos sobre el estado.
 - Reglas de idempotencia cuando correspondan.
 
-No inventar rutas ni asumir un esquema de autenticación hasta que estén definidos.
+Las rutas de sala están en `contracts/api/rooms.md`. Crear, consultar y unirse no exigen autenticación. Salir e iniciar no se publican hasta que exista un mecanismo de identidad. No se asume otro esquema de autenticación.
 
 ## 12. Comunicación en tiempo real
 

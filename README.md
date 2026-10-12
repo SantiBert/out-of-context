@@ -22,6 +22,7 @@ El cliente móvil está inicializado con Expo, React Native y TypeScript. El bac
 ├── .gitignore
 ├── .env.example         Variables del servidor. Placeholders, no secretos reales.
 ├── docker-compose.yml   PostgreSQL 16.15 y el backend Django.
+├── Makefile             Comandos de instalación, calidad y arranque.
 └── README.md
 ```
 
@@ -89,7 +90,7 @@ docker compose up -d backend
 docker compose logs backend
 ```
 
-`docker compose build backend` y `docker compose up -d --build` reconstruyen la imagen cuando cambian `requirements.txt` o el código. `migrate` aplica las migraciones de Django (`admin`, `auth`, `contenttypes` y `sessions`). No crea modelos del juego. `GET /api/health/` responde `200` con `{"status": "ok"}` y no consulta la base. Desde el equipo: `http://127.0.0.1:8000/api/health/`.
+`docker compose build backend` y `docker compose up -d --build` reconstruyen la imagen cuando cambian `requirements.txt` o el código. `migrate` aplica las migraciones de Django (`admin`, `auth`, `contenttypes` y `sessions`). No crea modelos del juego. `GET /api/health/` responde `200` con `{"status": "ok"}` y no consulta la base. Desde el equipo: `http://127.0.0.1:8000/api/health/`. Swagger está en `http://127.0.0.1:8000/api/schema/swagger-ui/` y el contrato OpenAPI en `http://127.0.0.1:8000/api/schema/`.
 
 Las pruebas dentro del contenedor tampoco abren PostgreSQL:
 
@@ -146,6 +147,12 @@ npm run format
 - `npm run format` aplica Prettier.
 
 `package.json` también define `ios` y `web`. El producto previsto es Android. Esos dos scripts no forman parte de este flujo y no se han ejecutado.
+
+## Makefile
+
+En la raíz, GNU Make agrupa esos comandos. `make` sin argumentos equivale a `make help`. `make check` ejecuta las mismas comprobaciones que la integración continua. En Windows hace falta GNU Make; los bloques de PowerShell de esta guía siguen siendo válidos.
+
+`make install` prepara el virtualenv y el cliente. `make postgres`, `make migrate` y `make run` arrancan PostgreSQL y Django en el equipo. `make compose-build`, `make compose-migrate`, `make compose-up`, `make compose-test` y `make compose-stop` usan el contenedor. `make android` compila el development build. No hay un objetivo que borre el volumen `postgres_data`.
 
 ## Integración continua
 

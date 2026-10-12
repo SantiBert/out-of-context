@@ -57,7 +57,7 @@
 | OOC-002 | Crear la estructura del monorepo | P0 | IN_PROGRESS | OOC-001 |
 | OOC-003 | Configurar entornos, calidad y pruebas automatizadas | P0 | IN_PROGRESS | OOC-002 |
 | OOC-004 | Implementar modelos y lógica central del juego | P0 | DONE | OOC-001, OOC-003 |
-| OOC-005 | Implementar salas y gestión de partidas | P0 | TODO | OOC-003, OOC-004 |
+| OOC-005 | Implementar salas y gestión de partidas | P0 | IN_PROGRESS | OOC-003, OOC-004 |
 | OOC-006 | Implementar comunicación en tiempo real | P0 | TODO | OOC-005 |
 | OOC-007 | Implementar el flujo de una ronda | P0 | TODO | OOC-004, OOC-006 |
 | OOC-008 | Implementar votación y puntuación | P0 | TODO | OOC-004, OOC-007 |
@@ -419,3 +419,134 @@ Quedan fuera de OOC-004, sin servicio que cambiar:
 - Impedir una ronda nueva mientras la anterior sigue abierta.
 
 Siguen abiertas las decisiones del reglamento sobre el reparto digital, la conversación, la revelación simultánea y los detalles de impostor que el texto no incluye. OOC-001.6 no se cierra con esta historia.
+
+---
+
+## OOC-005 — Implementar salas y gestión de partidas
+
+**Prioridad:** P0  
+**Estado:** IN_PROGRESS  
+**Dependencias:** OOC-003, OOC-004  
+**Objetivo:** administrar salas y partidas sin duplicar el dominio de OOC-004.
+
+### OOC-005.1 — Definir el ciclo de vida de las salas y las partidas
+
+**Prioridad:** P0  
+**Estado:** DONE  
+**Dependencias:** OOC-004
+
+La definición está en la sección 8 de `docs/ARCHITECTURE.md`. No se añadieron modelos, endpoints ni WebSockets. `Game`, `Participant` y `Round` siguen siendo las entidades de partida, jugador y ronda.
+
+**Criterios de aceptación:**
+
+- [x] Los estados persistidos de la partida y de la ronda, y las transiciones que ya existen, están documentados.
+- [x] Se distingue lo que el reglamento y OOC-004 ya fijan de lo que todavía requiere aprobación.
+- [x] No se crea una sala ni otro jugador que duplique `Game` o `Participant`.
+- [x] El texto no contradice el reglamento.
+
+**Decisiones pendientes:**
+
+- [x] La sala es una entidad distinta de `Game`.
+- [x] Iniciar la partida es del anfitrión, identificado por su nombre visible.
+- [ ] Decidir el resto de operaciones que serían solo del anfitrión. El reglamento no reserva acciones de juego a una sola persona.
+- [x] Un participante puede abandonar la sala y esta sigue en `waiting`. El anfitrión no puede irse, así que la sala no queda vacía.
+- [ ] Decidir la entrada con la partida ya iniciada y el acceso tardío.
+- [ ] Distinguir reconexión y abandono cuando exista una forma de reconocer al mismo participante.
+- [ ] Elegir el mecanismo de identidad. En la sala, el MVP usa el nombre visible y no hay autenticación.
+
+### OOC-005.2 — Implementar la creación e identificación de salas
+
+**Prioridad:** P0  
+**Estado:** DONE  
+**Dependencias:** OOC-005.1
+
+`create_room` persiste `Room` y `RoomMember`. No crea una partida, no reparte cartas y no expone un endpoint.
+
+**Criterios de aceptación:**
+
+- [x] Una sala válida nace en `waiting` con un código de invitación único.
+- [x] El creador queda como único anfitrión y miembro, identificado por su nombre.
+- [x] Un nombre vacío, un nombre demasiado largo, un nombre repetido en la misma sala y un segundo anfitrión se rechazan.
+- [x] No hay autenticación improvisada. El nombre visible es la identidad provisional del MVP.
+
+### OOC-005.3 — Implementar la incorporación y salida de participantes
+
+**Prioridad:** P0  
+**Estado:** DONE  
+**Dependencias:** OOC-005.2
+
+`join_room` y `leave_room` cambian los miembros de una sala en `waiting`. No hay endpoint ni WebSocket.
+
+**Criterios de aceptación:**
+
+- [x] Un participante se incorpora con el código de invitación, como máximo hasta 8, y un nombre que no esté ya en la sala.
+- [x] Un participante puede irse y la sala sigue en `waiting`. El anfitrión no puede irse.
+- [x] Un código desconocido, una sala que no está en `waiting`, la sala llena, un nombre repetido, la salida del anfitrión y la salida de alguien que no está se rechazan con un código de error estable.
+- [x] Dos incorporaciones simultáneas cuando ya hay 7 miembros dejan un solo octavo.
+
+### OOC-005.4 — Implementar la consulta del estado de una sala
+
+**Prioridad:** P0  
+**Estado:** DONE  
+**Dependencias:** OOC-005.3
+
+`get_room_state` lee el estado público de una sala. No hay endpoint ni WebSocket.
+
+**Criterios de aceptación:**
+
+- [x] La consulta devuelve el código, el estado, el anfitrión, los participantes y la cantidad.
+- [x] Indica si la sala admite incorporaciones y si hay entre 4 y 8 participantes en `waiting`.
+- [x] Un código desconocido se rechaza. La respuesta no incluye claves internas, cartas, roles ni votos.
+- [x] Quien tiene el código ve la misma representación. No hay autenticación improvisada.
+
+### OOC-005.5 — Implementar el inicio de partidas
+
+**Prioridad:** P0  
+**Estado:** DONE  
+**Dependencias:** OOC-005.4, OOC-004
+
+`start_game` crea una partida en `preparing` desde una sala en `waiting`. No hay endpoint ni WebSocket. No crea pilas ni la primera ronda.
+
+**Criterios de aceptación:**
+
+- [x] Solo el anfitrión inicia. Con menos de 4 o una sala que no espera, no se crea partida.
+- [x] Con 4 a 8 miembros la transición crea un solo `Game` y un `Participant` por miembro. Repetirla no duplica.
+- [x] Un fallo durante los participantes deja la sala en `waiting` y sin partida.
+- [x] No se reimplementa el mazo. Falta el catálogo que alimenta `create_piles`. La primera ronda sigue siendo `prepare_round`, en OOC-007.
+
+### OOC-005.6 — Exponer la gestión de salas
+
+**Prioridad:** P0  
+**Estado:** DONE  
+**Dependencias:** OOC-005.2, OOC-005.3, OOC-005.4, OOC-005.5
+
+`POST /api/rooms/`, `GET /api/rooms/{code}/` y `POST /api/rooms/{code}/members/` delegan en los servicios de sala. El contrato está en `contracts/api/rooms.md`. No hay WebSocket ni cliente móvil.
+
+**Criterios de aceptación:**
+
+- [x] Crear, consultar y unirse usan los servicios de dominio y devuelven el estado público.
+- [x] Un nombre ausente o vacío, un código desconocido, un nombre repetido, la sala llena y una sala que no espera responden con un código de error estable.
+- [x] La respuesta no incluye claves internas, cartas, roles ni votos.
+- [x] Salir e iniciar no tienen ruta. Un nombre enviado por el cliente no demuestra la identidad, y no se añadió autenticación.
+
+### OOC-005.7 — Validar el ciclo de vida de las salas
+
+**Prioridad:** P0  
+**Estado:** DONE  
+**Dependencias:** OOC-005.1, OOC-005.2, OOC-005.3, OOC-005.4, OOC-005.5, OOC-005.6
+
+Una prueba recorre crear, consultar, unirse, salir e iniciar. Crear, consultar y unirse pasan por la API. Salir e iniciar usan el servicio, porque no tienen ruta. No hay WebSocket ni cliente móvil.
+
+**Criterios de aceptación:**
+
+- [x] Con 3 miembros no se inicia. Con 4 y con 8 se crea una sola partida en `preparing`, y repetir el inicio no la duplica.
+- [x] El anfitrión no puede irse. Otro participante sí, y puede volver sin repetir el nombre. Después de `started` no se admite gente ni se borra a nadie.
+- [x] La consulta pública no incluye la clave de la partida, cartas, roles ni votos. Salir e iniciar por HTTP responden 404.
+- [x] Las incorporaciones simultáneas y los dos inicios simultáneos siguen cubiertos por las pruebas de membresía y de inicio.
+
+Queda fuera de esta épica:
+
+- El catálogo que alimenta `create_piles`. El inicio reutiliza `Game` y `Participant` y no inventa las 15 o 16 situaciones.
+- `prepare_round`, que prepara la primera ronda. Corresponde a OOC-007.
+- La identidad que haría falta para publicar salir e iniciar.
+- La comunicación en tiempo real de OOC-006 y la interfaz móvil de OOC-009.
