@@ -1,3 +1,5 @@
+import hashlib
+import logging
 import secrets
 
 from django.core.exceptions import ValidationError
@@ -16,6 +18,8 @@ from rooms.state import RoomState
 INVITATION_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 CODE_LENGTH = 6
 CODE_ATTEMPTS = 5
+
+logger = logging.getLogger(__name__)
 
 
 class InvalidRoom(Exception):
@@ -62,7 +66,9 @@ def create_room(name):
     cleaned = _clean_name(name)
     with transaction.atomic():
         room = _create_with_unique_code()
-        RoomMember.objects.create(room=room, name=cleaned, is_host=True)
+        token = _create_member(room, cleaned, is_host=True)
+        room.access_token = token
+        _schedule_events(room.code, [("room.snapshot", None)])
         return room
 
 
@@ -76,14 +82,37 @@ def join_room(code, name):
             raise DuplicateMember("Ese nombre ya está en la sala.")
         if room.members.count() >= MAX_ROOM_MEMBERS:
             raise RoomFull("La sala ya tiene 8 participantes.")
-        member = RoomMember.objects.create(
-            room=room,
-            name=cleaned_name,
-            is_host=False,
-        )
+        before = get_room_state(room.code)
+        token = _create_member(room, cleaned_name, is_host=False)
+        member = room.members.get(name=cleaned_name)
+        member.access_token = token
         if room.members.count() > MAX_ROOM_MEMBERS:
             raise RoomFull("La sala ya tiene 8 participantes.")
+        _schedule_membership(room.code, "room.player_joined", cleaned_name, before)
         return member
+
+
+def member_for_token(code, token):
+    if not isinstance(token, str) or not token:
+        return None
+    try:
+        cleaned = _clean_code(code)
+    except RoomNotFound:
+        return None
+    return RoomMember.objects.filter(
+        room__code=cleaned,
+        token_hash=_token_hash(token),
+    ).first()
+
+
+def connection_access(code, token):
+    try:
+        get_room_state(code)
+    except RoomNotFound:
+        return "missing"
+    if member_for_token(code, token) is None:
+        return "denied"
+    return "ok"
 
 
 def get_room_state(code):
@@ -118,7 +147,9 @@ def leave_room(code, name):
             raise MemberNotFound("Ese participante no está en la sala.")
         if member.is_host:
             raise HostCannotLeave("El anfitrión no puede abandonar la sala.")
+        before = get_room_state(room.code)
         member.delete()
+        _schedule_membership(room.code, "room.player_left", cleaned_name, before)
         return room
 
 
@@ -142,6 +173,10 @@ def start_game(code, name):
         room.game = game
         room.status = Room.Status.STARTED
         room.save()
+        _schedule_events(
+            room.code,
+            [("game.started", None), ("room.state_changed", None)],
+        )
         return game
 
 
@@ -192,3 +227,58 @@ def _create_with_unique_code():
 
 def _invitation_code():
     return "".join(secrets.choice(INVITATION_ALPHABET) for _index in range(CODE_LENGTH))
+
+
+def _create_member(room, name, is_host):
+    token = secrets.token_urlsafe(32)
+    RoomMember.objects.create(
+        room=room,
+        name=name,
+        is_host=is_host,
+        token_hash=_token_hash(token),
+    )
+    return token
+
+
+def _token_hash(token):
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+def _schedule_membership(code, kind, name, before):
+    notices = [(kind, name)]
+    after = get_room_state(code)
+    if _public_change(before, after):
+        notices.append(("room.state_changed", None))
+    _schedule_events(code, notices)
+
+
+def _public_change(before, after):
+    return (before.status, before.accepting_members, before.can_start) != (
+        after.status,
+        after.accepting_members,
+        after.can_start,
+    )
+
+
+def _schedule_events(code, notices):
+    def send():
+        try:
+            from realtime.publish import publish_room_events
+
+            state = get_room_state(code)
+            publish_room_events(
+                code,
+                [_event_payload(state, kind, name) for kind, name in notices],
+            )
+        except Exception:
+            logger.exception("No se publicaron los eventos de la sala %s.", code)
+
+    transaction.on_commit(send)
+
+
+def _event_payload(state, kind, name):
+    payload = state._asdict()
+    payload["participants"] = list(state.participants)
+    if name is not None:
+        payload["name"] = name
+    return kind, payload

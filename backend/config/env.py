@@ -74,6 +74,20 @@ def _require_postgres(name, value):
     return text
 
 
+def channel_layer_from_env(environ):
+    url = (environ.get("REDIS_URL") or "").strip()
+    if not url.startswith(("redis://", "rediss://")):
+        raise ImproperlyConfigured(
+            "REDIS_URL es obligatoria y debe empezar por redis:// o rediss://."
+        )
+    return {
+        "default": {
+            "BACKEND": "channels_redis.core.RedisChannelLayer",
+            "CONFIG": {"hosts": [url]},
+        }
+    }
+
+
 def _parse_port(value):
     text = (value or "").strip()
     if not text.isdigit():

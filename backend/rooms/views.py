@@ -3,7 +3,12 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from rooms.serializers import NameSerializer, RoomErrorSerializer, RoomStateSerializer
+from rooms.serializers import (
+    NameSerializer,
+    RoomAccessSerializer,
+    RoomErrorSerializer,
+    RoomStateSerializer,
+)
 from rooms.service import (
     InvalidRoom,
     RoomError,
@@ -40,13 +45,22 @@ def public_state(state):
     return RoomStateSerializer(state._asdict()).data
 
 
+def access_state(state, token):
+    payload = state._asdict()
+    payload["participants"] = list(state.participants)
+    payload["token"] = token
+    serializer = RoomAccessSerializer(data=payload)
+    serializer.is_valid(raise_exception=True)
+    return serializer.data
+
+
 class CreateRoomView(APIView):
     authentication_classes = []
     permission_classes = [AllowAny]
 
     @extend_schema(
         request=NameSerializer,
-        responses={201: RoomStateSerializer, 400: RoomErrorSerializer},
+        responses={201: RoomAccessSerializer, 400: RoomErrorSerializer},
     )
     def post(self, request):
         serializer = NameSerializer(data=request.data)
@@ -57,7 +71,7 @@ class CreateRoomView(APIView):
             state = get_room_state(room.code)
         except (InvalidRoom, RoomError) as error:
             return room_error_response(error)
-        return Response(public_state(state), status=201)
+        return Response(access_state(state, room.access_token), status=201)
 
 
 class RoomDetailView(APIView):
@@ -80,7 +94,7 @@ class JoinRoomView(APIView):
     @extend_schema(
         request=NameSerializer,
         responses={
-            201: RoomStateSerializer,
+            201: RoomAccessSerializer,
             400: RoomErrorSerializer,
             404: RoomErrorSerializer,
             409: RoomErrorSerializer,
@@ -91,8 +105,8 @@ class JoinRoomView(APIView):
         if not serializer.is_valid():
             return invalid_name_response()
         try:
-            join_room(code, serializer.validated_data["name"])
+            member = join_room(code, serializer.validated_data["name"])
             state = get_room_state(code)
         except (InvalidRoom, RoomError) as error:
             return room_error_response(error)
-        return Response(public_state(state), status=201)
+        return Response(access_state(state, member.access_token), status=201)

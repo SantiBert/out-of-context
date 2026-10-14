@@ -17,6 +17,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from config.env import (
+    channel_layer_from_env,
     database_from_env,
     parse_allowed_hosts,
     parse_debug,
@@ -42,6 +43,7 @@ ALLOWED_HOSTS = parse_allowed_hosts(os.environ.get("DJANGO_ALLOWED_HOSTS"))
 # Application definition
 
 INSTALLED_APPS = [
+    "daphne",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -53,6 +55,7 @@ INSTALLED_APPS = [
     "health",
     "games",
     "rooms",
+    "realtime",
 ]
 
 MIDDLEWARE = [
@@ -83,6 +86,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "config.wsgi.application"
+ASGI_APPLICATION = "config.asgi.application"
 
 
 # Database
@@ -105,6 +109,11 @@ if "test" in sys.argv:
         "TEST": {"NAME": BASE_DIR / "test.sqlite3"},
         "OPTIONS": {"timeout": 5, "transaction_mode": "IMMEDIATE"},
     }
+    CHANNEL_LAYERS = {
+        "default": {"BACKEND": "channels.layers.InMemoryChannelLayer"},
+    }
+else:
+    CHANNEL_LAYERS = channel_layer_from_env(os.environ)
 
 
 # Password validation

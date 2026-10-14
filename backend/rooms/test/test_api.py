@@ -1,3 +1,5 @@
+import hashlib
+
 from django.test import TestCase
 from rest_framework.test import APIClient
 
@@ -26,8 +28,12 @@ class RoomApiTests(TestCase):
         response = self.client.post("/api/rooms/", {"name": "Ana"}, format="json")
 
         self.assertEqual(response.status_code, 201)
-        self.assertEqual(set(response.json()), PUBLIC_FIELDS)
+        self.assertEqual(set(response.json()), PUBLIC_FIELDS | {"token"})
         body = response.json()
+        member = Room.objects.get(code=body["code"]).members.get()
+        digest = hashlib.sha256(body["token"].encode()).hexdigest()
+        self.assertEqual(member.token_hash, digest)
+        self.assertNotEqual(body["token"], member.token_hash)
         self.assertEqual(body["host"], "Ana")
         self.assertEqual(body["participants"], ["Ana"])
         self.assertEqual(body["player_count"], 1)
@@ -73,8 +79,13 @@ class RoomApiTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 201)
+        self.assertEqual(set(response.json()), PUBLIC_FIELDS | {"token"})
+        self.assertNotEqual(response.json()["token"], created.json()["token"])
         self.assertEqual(response.json()["participants"], ["Ana", "Luis"])
         self.assertEqual(response.json()["player_count"], 2)
+        fetched = self.client.get(f"/api/rooms/{code}/")
+        self.assertEqual(set(fetched.json()), PUBLIC_FIELDS)
+        self.assertNotIn("token", fetched.json())
 
     def test_a_duplicate_name_is_rejected(self):
         created = self.client.post("/api/rooms/", {"name": "Ana"}, format="json")

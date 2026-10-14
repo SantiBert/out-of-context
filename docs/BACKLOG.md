@@ -58,7 +58,7 @@
 | OOC-003 | Configurar entornos, calidad y pruebas automatizadas | P0 | IN_PROGRESS | OOC-002 |
 | OOC-004 | Implementar modelos y lógica central del juego | P0 | DONE | OOC-001, OOC-003 |
 | OOC-005 | Implementar salas y gestión de partidas | P0 | IN_PROGRESS | OOC-003, OOC-004 |
-| OOC-006 | Implementar comunicación en tiempo real | P0 | TODO | OOC-005 |
+| OOC-006 | Implementar comunicación en tiempo real | P0 | IN_PROGRESS | OOC-005 |
 | OOC-007 | Implementar el flujo de una ronda | P0 | TODO | OOC-004, OOC-006 |
 | OOC-008 | Implementar votación y puntuación | P0 | TODO | OOC-004, OOC-007 |
 | OOC-009 | Implementar la interfaz principal en React Native | P0 | TODO | OOC-002, OOC-001 |
@@ -237,15 +237,17 @@ La ejecución en Android y la compilación de desarrollo siguen abiertas: el ent
 ### OOC-002.5 — Preparar Django Channels
 
 **Prioridad:** P1  
-**Estado:** TODO  
+**Estado:** DONE  
 **Dependencias:** OOC-002.3
+
+Channels 4.3 y Daphne atienden HTTP y WebSocket con `runserver`. Fuera de las pruebas, el channel layer es Redis.
 
 **Criterios de aceptación:**
 
-- [ ] Django Channels está instalado.
-- [ ] Se configura el punto de entrada ASGI.
-- [ ] Se documenta el funcionamiento del servidor ASGI.
-- [ ] Se documenta cuándo es necesario Redis para compartir canales entre procesos.
+- [x] Django Channels está instalado.
+- [x] Se configura el punto de entrada ASGI.
+- [x] Se documenta el funcionamiento del servidor ASGI.
+- [x] Se documenta cuándo es necesario Redis para compartir canales entre procesos.
 
 ### OOC-002.6 — Documentar contratos y comandos
 
@@ -451,7 +453,7 @@ La definición está en la sección 8 de `docs/ARCHITECTURE.md`. No se añadiero
 - [ ] Decidir el resto de operaciones que serían solo del anfitrión. El reglamento no reserva acciones de juego a una sola persona.
 - [x] Un participante puede abandonar la sala y esta sigue en `waiting`. El anfitrión no puede irse, así que la sala no queda vacía.
 - [ ] Decidir la entrada con la partida ya iniciada y el acceso tardío.
-- [ ] Distinguir reconexión y abandono cuando exista una forma de reconocer al mismo participante.
+- [x] Distinguir reconexión y abandono. El token reconoce al miembro: cerrar el socket no lo saca de la sala. Abandonar sigue siendo `leave_room`.
 - [ ] Elegir el mecanismo de identidad. En la sala, el MVP usa el nombre visible y no hay autenticación.
 
 ### OOC-005.2 — Implementar la creación e identificación de salas
@@ -550,3 +552,104 @@ Queda fuera de esta épica:
 - `prepare_round`, que prepara la primera ronda. Corresponde a OOC-007.
 - La identidad que haría falta para publicar salir e iniciar.
 - La comunicación en tiempo real de OOC-006 y la interfaz móvil de OOC-009.
+
+## OOC-006 — Implementar comunicación en tiempo real
+
+**Prioridad:** P0  
+**Estado:** IN_PROGRESS  
+**Dependencias:** OOC-005  
+**Objetivo:** propagar el estado autorizado sin mezclar el transporte con las reglas del juego.
+
+### OOC-006.1 — Configurar Django Channels y WebSockets
+
+**Prioridad:** P0  
+**Estado:** DONE  
+**Dependencias:** OOC-002.5
+
+`runserver` usa Daphne. `ws/health/` acepta y cierra una conexión de prueba. Redis es el channel layer de ejecución. No hay eventos de juego ni cliente móvil.
+
+**Criterios de aceptación:**
+
+- [x] HTTP sigue en Django y el WebSocket de prueba vive en `ws/health/`.
+- [x] Compose añade Redis sin sustituir Postgres. `REDIS_URL` no contiene un secreto.
+- [x] Las pruebas cubren conectar, desconectar, una ruta desconocida y la configuración de Redis.
+- [x] La capa en memoria solo se usa al ejecutar `manage.py test`.
+
+### OOC-006.2 — Definir el protocolo de eventos WebSocket
+
+**Prioridad:** P0  
+**Estado:** DONE  
+**Dependencias:** OOC-006.1
+
+Los mensajes son `type` y `payload`. Los seis eventos públicos los emite solo el servidor. El contrato está en `contracts/realtime/events.md`. `ws/health/` no los envía. No hay rondas, votación ni cliente móvil.
+
+**Criterios de aceptación:**
+
+- [x] Cada evento válido lleva `type` y `payload`, y el payload de sala es el estado público.
+- [x] Faltan campos, un tipo desconocido o un payload con carta, rol, voto o clave interna se rechazan.
+- [x] El cliente no puede emitir esos eventos. No hay comandos del cliente.
+- [x] Sigue abierta la identidad: sin ella no se define quién puede pedir unirse, salir o iniciar por el socket.
+
+### OOC-006.3 — Autorizar conexiones WebSocket y aislar salas
+
+**Prioridad:** P0  
+**Estado:** DONE  
+**Dependencias:** OOC-005, OOC-006.2
+
+`ws/rooms/<code>/` no acepta el nombre ni un `player_id` como credencial y no une la conexión a ningún grupo. `ws/health/` no cambia. No hay rondas, cartas, votos ni puntuación.
+
+**Criterios de aceptación:**
+
+- [x] Una sala conocida responde `unauthorized` aunque el cliente envíe el nombre del anfitrión o un id.
+- [x] Un código desconocido responde `room_not_found` sin listar miembros.
+- [x] Dos salas no comparten grupo. El cliente no elige el nombre del grupo.
+- [x] Un acceso válido usa el token emitido al crear o al unirse, ligado a ese miembro. Es lo único que abre `room.<code>`. Quedó entregado en OOC-006.5.
+
+### OOC-006.4 — Integrar eventos en tiempo real con las operaciones de sala
+
+**Prioridad:** P0  
+**Estado:** DONE  
+**Dependencias:** OOC-005, OOC-006.2
+
+Crear, unirse, salir e iniciar publican los eventos públicos después del commit. El payload sale del estado persistido. Un fallo de Redis no deshace la operación. El socket sigue sin entrar en el grupo. No hay rondas, cartas ni puntuación.
+
+**Criterios de aceptación:**
+
+- [x] Cada operación confirmada emite su evento, y un alta o una baja también emiten `room.state_changed` cuando cambian los indicadores.
+- [x] Una operación rechazada o revertida no publica.
+- [x] Sin conexiones suscritas, el cambio queda en la base.
+- [x] Si el envío falla, `POST /api/rooms/` sigue en 201 y `GET` devuelve la sala.
+- [x] La entrega al socket que presenta el token quedó resuelta en OOC-006.5.
+
+### OOC-006.5 — Gestionar desconexiones y reconexiones
+
+**Prioridad:** P0  
+**Estado:** DONE  
+**Dependencias:** OOC-006.3, OOC-006.4
+
+El token del miembro abre `ws/rooms/<code>/`. Al cerrar, el canal sale del grupo y el participante sigue en la sala. Reconectar envía el snapshot persistido y no crea otro miembro ni otra partida. No hay rondas, cartas ni votación.
+
+**Criterios de aceptación:**
+
+- [x] Desconectar saca al canal del grupo y no borra al miembro ni la partida.
+- [x] El mismo token vuelve a entrar y recibe `room.snapshot`. No duplica participantes.
+- [x] Un nombre, un id o el token de otra sala no entran en el grupo.
+- [x] Un mensaje del cliente no cambia la sala. Si el miembro ya salió, el token deja de servir.
+- [ ] Siguen abiertos el login, salir e iniciar por HTTP, la entrada tardía y la reconexión durante una votación. El cliente debe guardar el token: no se puede recuperar.
+
+### OOC-006.6 — Pruebas de integración de WebSockets
+
+**Prioridad:** P0  
+**Estado:** DONE  
+**Dependencias:** OOC-006.5
+
+Varios sockets y la API recorren la misma sala. Las pruebas anteriores se conservan. `manage.py test` no abre Redis: cubre el reparto en un proceso, el aislamiento y un envío fallido. No cubre dos procesos, la caducidad de canales ni `docker compose`.
+
+**Criterios de aceptación:**
+
+- [x] Los sockets autorizados reciben el snapshot, el alta, el cambio de estado y el inicio.
+- [x] Otra sala y una conexión sin token no reciben esos eventos.
+- [x] Un alta rechazada no se publica. Sin sockets, crear, unirse y consultar siguen en REST.
+- [x] Reconectar no duplica miembros. Un mensaje inválido no crea participantes.
+- [x] Si el envío falla, el alta queda en `GET` y el snapshot posterior la incluye.
+- [x] Los mensajes no llevan token, clave interna, carta, rol ni voto.

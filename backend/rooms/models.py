@@ -43,6 +43,7 @@ class RoomMember(ValidatedModel):
     )
     name = models.CharField(max_length=NAME_MAX_LENGTH)
     is_host = models.BooleanField(default=False)
+    token_hash = models.CharField(max_length=64, unique=True)
 
     class Meta:
         constraints = [

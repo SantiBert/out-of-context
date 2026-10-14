@@ -356,13 +356,13 @@ El cierre de la conversación, el paso a `voting` o `finished`, y la prohibició
 
 **Estado:** decisión aprobada para la creación, la incorporación, la salida, la consulta y el inicio. La sala no es la partida. `create_room` la deja en `waiting`, le asigna un código que no se repite y registra al creador como único anfitrión y miembro. `join_room` admite a otro participante con el código, recortado y en mayúsculas, mientras la sala sigue en `waiting`. El nombre se normaliza igual que al crear y no puede repetirse. El tope es 8, el mismo de la partida, y se comprueba con la sala bloqueada. `leave_room` quita a un participante y la sala sigue en `waiting`. El anfitrión no puede irse, así que la sala no queda vacía. Cuando la sala ya empezó, tampoco se borra a nadie.
 
-`get_room_state` devuelve el código, el estado, el anfitrión, los participantes y la cantidad. Admite incorporaciones si está en `waiting` y hay menos de 8. Puede empezar si está en `waiting` y hay entre 4 y 8. Quien tiene el código ve la misma representación: no hay autenticación. La respuesta no incluye la clave interna ni cartas, roles o votos.
+`get_room_state` devuelve el código, el estado, el anfitrión, los participantes y la cantidad. Admite incorporaciones si está en `waiting` y hay menos de 8. Puede empezar si está en `waiting` y hay entre 4 y 8. Quien tiene el código ve la misma representación. La respuesta no incluye la clave interna, el token, ni cartas, roles o votos.
 
-`POST /api/rooms/`, `GET /api/rooms/{code}/` y `POST /api/rooms/{code}/members/` delegan en esos servicios. No hay ruta para salir ni para iniciar: el nombre que enviaría el cliente ya es público y no demuestra quién llama. El contrato está en `contracts/api/rooms.md`.
+`POST /api/rooms/`, `GET /api/rooms/{code}/` y `POST /api/rooms/{code}/members/` delegan en esos servicios. Crear y unirse devuelven una vez el token del miembro; la consulta no lo incluye. No hay ruta para salir ni para iniciar. El contrato está en `contracts/api/rooms.md`.
 
 `start_game` solo acepta el nombre del anfitrión. Con la sala bloqueada, exige `waiting` y entre 4 y 8 miembros, crea un `Game` en `preparing` y un `Participant` por miembro, guarda esa partida en la sala y la pasa a `started`. Otra llamada del anfitrión devuelve la misma partida. No llama a `create_piles`: no hay catálogo de 15 o 16 situaciones y el reglamento no dice qué carta se omite entre 4 y 6 jugadores. Tampoco llama a `prepare_round`. Esa preparación de la primera ronda queda en OOC-007, cuando las pilas existan.
 
-El reglamento no reserva el resto de las acciones de juego a una sola persona. Indicar que se está listo o declarar el cierre cuando ya hay mayoría sigue siendo una regla de ronda de OOC-007, no un privilegio del anfitrión. Qué otras operaciones serían solo del anfitrión, la entrada con la partida ya iniciada y el acceso tardío siguen abiertos. La reconexión no reinicia ni modifica una ronda. Reconocer al mismo participante después de desconectarse requiere una identidad que todavía no existe, así que no hay controles de autenticación.
+El reglamento no reserva el resto de las acciones de juego a una sola persona. Indicar que se está listo o declarar el cierre cuando ya hay mayoría sigue siendo una regla de ronda de OOC-007, no un privilegio del anfitrión. Qué otras operaciones serían solo del anfitrión, la entrada con la partida ya iniciada y el acceso tardío siguen abiertos. Cerrar el socket no es abandonar la sala. El mismo token vuelve a entrar y recibe el estado público persistido, sin crear otro miembro ni otra partida. La reconexión durante una votación no está definida. No hay cuenta de usuario.
 
 ## 9. Reglas de cartas y roles
 
@@ -462,6 +462,8 @@ Las rutas de sala están en `contracts/api/rooms.md`. Crear, consultar y unirse 
 Django Channels y WebSockets se utilizarán para las actualizaciones que necesiten propagación en tiempo real.
 
 Los eventos se documentan en `contracts/realtime/`.
+
+`create_room`, `join_room`, `leave_room` y `start_game` publican los eventos públicos al grupo `room.<code>` con `transaction.on_commit`, después de confirmar la operación. El callback vuelve a leer el estado persistido y descarta todo lo que no sea público. El socket entra en ese grupo solo si presenta el token del miembro, y al cerrar sale del grupo sin borrar al participante. Si Redis o el envío fallan, el error queda en el log y la respuesta HTTP sigue siendo la de la operación confirmada. Si el socket no está, la recuperación es `GET /api/rooms/<code>/`.
 
 Cada evento debe definir:
 

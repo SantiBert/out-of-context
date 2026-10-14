@@ -53,6 +53,7 @@ jobs:
       DJANGO_DEBUG: "False"
       DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1
       DJANGO_DB_ENGINE: sqlite
+      REDIS_URL: redis://127.0.0.1:6379/0
     steps:
       - name: Checkout
         uses: actions/checkout@v4

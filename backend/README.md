@@ -168,6 +168,12 @@ Respuesta `200`:
 
 No requiere autenticación y no consulta la base de datos. Sirve para comprobar que el proceso responde.
 
+## WebSocket
+
+`docker compose up -d` levanta Postgres, Redis y el backend. Daphne atiende HTTP y WebSocket con `runserver`. La ruta de prueba es `ws://127.0.0.1:8000/ws/health/`: acepta la conexión y no envía datos de juego. Otra ruta no conecta.
+
+Redis es el channel layer fuera de las pruebas. Compose fija `REDIS_URL=redis://redis:6379/0`. En el equipo, `.env` usa `redis://localhost:6379/0`. `manage.py test` no abre Redis.
+
 ## Swagger
 
 Con el servidor en marcha:
