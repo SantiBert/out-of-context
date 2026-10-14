@@ -31,11 +31,16 @@ def make_cards(count, start=1):
     return cards
 
 
-def prepared_game(player_count):
+def finish_round(round_):
+    round_.status = Round.Status.FINISHED
+    round_.save(update_fields=["status"])
+
+
+def prepared_game(player_count, start=1):
     config = deck_config(player_count)
     game = Game.objects.create()
     make_players(game, player_count)
-    create_piles(game, make_cards(config.pile_count))
+    create_piles(game, make_cards(config.pile_count, start=start))
     return game
 
 
@@ -148,6 +153,7 @@ class StartRoundTests(TestCase):
         game = prepared_game(4)
         rng = random.Random(3)
         first = start_round(game, rng)
+        finish_round(first)
         second = start_round(game, rng)
         first_ids = set(first.piles.values_list("card_id", flat=True))
         second_ids = set(second.piles.values_list("card_id", flat=True))
@@ -158,7 +164,7 @@ class StartRoundTests(TestCase):
         game = prepared_game(4)
         rng = random.Random(5)
         for _index in range(5):
-            start_round(game, rng)
+            finish_round(start_round(game, rng))
 
         with self.assertRaises(InsufficientPiles):
             start_round(game, rng)
@@ -169,7 +175,7 @@ class StartRoundTests(TestCase):
         game = prepared_game(8)
         rng = random.Random(5)
         for _index in range(4):
-            start_round(game, rng)
+            finish_round(start_round(game, rng))
 
         with self.assertRaises(InsufficientPiles):
             start_round(game, rng)

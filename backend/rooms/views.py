@@ -5,16 +5,21 @@ from rest_framework.views import APIView
 
 from rooms.serializers import (
     NameSerializer,
+    OwnCardSerializer,
     RoomAccessSerializer,
     RoomErrorSerializer,
     RoomStateSerializer,
+    RoundPublicSerializer,
 )
 from rooms.service import (
     InvalidRoom,
     RoomError,
+    connection_access,
     create_room,
     get_room_state,
     join_room,
+    own_card,
+    round_state,
 )
 
 ERROR_STATUS = {
@@ -22,6 +27,9 @@ ERROR_STATUS = {
     "room_closed": 409,
     "room_full": 409,
     "duplicate_member": 409,
+    "unauthorized": 401,
+    "round_unavailable": 404,
+    "card_unavailable": 404,
 }
 
 
@@ -110,3 +118,71 @@ class JoinRoomView(APIView):
         except (InvalidRoom, RoomError) as error:
             return room_error_response(error)
         return Response(access_state(state, member.access_token), status=201)
+
+
+class RoundStateView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        responses={
+            200: RoundPublicSerializer,
+            401: RoomErrorSerializer,
+            404: RoomErrorSerializer,
+        },
+    )
+    def get(self, request, code):
+        denied = _authorize(code, _request_token(request))
+        if denied is not None:
+            return denied
+        try:
+            view = round_state(code, _request_token(request))
+        except RoomError as error:
+            return room_error_response(error)
+        serializer = RoundPublicSerializer(data=view)
+        serializer.is_valid(raise_exception=True)
+        return Response(serializer.data)
+
+
+class OwnCardView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        responses={
+            200: OwnCardSerializer,
+            401: RoomErrorSerializer,
+            404: RoomErrorSerializer,
+        },
+    )
+    def get(self, request, code):
+        denied = _authorize(code, _request_token(request))
+        if denied is not None:
+            return denied
+        try:
+            card = own_card(code, _request_token(request))
+        except RoomError as error:
+            return room_error_response(error)
+        serializer = OwnCardSerializer(data=card)
+        serializer.is_valid(raise_exception=True)
+        return Response(serializer.data)
+
+
+def _request_token(request):
+    values = request.query_params.getlist("token")
+    if len(values) != 1 or not values[0]:
+        return ""
+    return values[0]
+
+
+def _authorize(code, token):
+    try:
+        get_room_state(code)
+    except RoomError as error:
+        return room_error_response(error)
+    if connection_access(code, token) != "ok":
+        return Response(
+            {"code": "unauthorized", "detail": "La conexión no está autorizada."},
+            status=401,
+        )
+    return None

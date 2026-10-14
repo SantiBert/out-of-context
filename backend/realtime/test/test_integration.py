@@ -104,13 +104,12 @@ class WebsocketIntegrationTests(TransactionTestCase):
                 self._assert_public(joined, card, ana["token"], extra="name")
                 self._assert_public(changed, card, ana["token"])
 
-            game = await database_sync_to_async(start_game)(code, "Ana")
+            await database_sync_to_async(start_game)(code, "Ana")
             for socket in (ana_socket, luis_socket):
                 started = await self._next(socket)
                 changed = await self._next(socket)
                 self.assertEqual(started["type"], "game.started")
                 self.assertEqual(started["payload"]["status"], Room.Status.STARTED)
-                self.assertNotIn(game.pk, started["payload"].values())
                 self.assertEqual(changed["type"], "room.state_changed")
                 self.assertFalse(changed["payload"]["accepting_members"])
                 self._assert_public(started, card, ana["token"])

@@ -345,12 +345,20 @@ En `preparing` no se admite un noveno participante. `in_progress` y `finished` e
 |---|---|
 | `prepared` | Las pilas de la ronda ya se eligieron y todavía no se repartieron. |
 | `conversation` | Cada participante tiene una carta. |
-| `voting` | Estado persistido, sin servicio que lo alcance. |
+| `voting` | `call_basta` deja la ronda aquí, todavía sin votos. Los gestos no salen por el socket. |
 | `finished` | Estado persistido, sin servicio que lo alcance. |
 
-El reparto exige `prepared` y pasa la ronda a `conversation`. Un segundo reparto no añade manos ni descartes. `start_round` crea la ronda en `prepared` y no crea otra si ya se alcanzó el máximo o no quedan pilas. Aplicar la puntuación no cambia el estado.
+`start_round` bloquea la partida y elige los montones que todavía no se usaron: 3 si hay 4–6 jugadores y 4 si hay 7–8. Deja la ronda en `prepared`, sin pasar la partida a `in_progress` y sin repartir. `deal_round` continúa desde esa ronda. La vista pública de la ronda no incluye la carta. No crea otra si la partida está `finished`, si ya se alcanzó el máximo, si no quedan montones o si alguna ronda sigue abierta. Abierta es `prepared`, `conversation` o `voting`. `finished` es la única resuelta. Un error no abre la ronda siguiente. Aplicar la puntuación no cambia el estado y no hay servicio que pase la ronda a `finished`.
 
-El cierre de la conversación, el paso a `voting` o `finished`, y la prohibición de abrir una ronda mientras la anterior sigue abierta no tienen servicio. Corresponden a OOC-007.
+`deal_round` bloquea la ronda, exige `prepared` y la pasa a `conversation`. Un segundo reparto, o dos a la vez, no añade manos ni descartes. `begin_conversation(code, token)` llama a ese reparto cuando la ronda abierta está en `prepared`. No acepta un estado. Si ya está en `conversation`, devuelve la misma ronda y no emite. En `voting`, con la partida `finished` o sin ronda preparada, no cambia nada. Solo el paso real publica `round.phase_changed` después de confirmar: `code`, `number`, `status`, `dealt_count` y `discard_count`. El cliente no puede declarar esa fase. `round_state(code, token)` devuelve la vista pública de la ronda abierta. `own_card(code, token)` sigue devolviendo `number` y `text` solo al miembro de ese token. Sin token válido no hay estado ni carta. `GET /api/rooms/{code}/round/?token=` y `GET /api/rooms/{code}/card/?token=` son esas lecturas. No hay chat.
+
+Elegir los montones es `start_round`. `prepare_round` lo hace y después reparte. Hace falta que la partida ya tenga pilas. `start_game` no la llama: falta el catálogo de 15 o 16 situaciones. El reglamento encadena la siguiente después de puntuar, si quedan pilas. Ese encadenamiento queda en OOC-008 y OOC-011.
+
+En `conversation`, `raise_hand(code, token)` registra la mano de ese miembro. Repetirla no añade otro registro. Con `L × 2 > N` —3, 3, 4, 4 y 5 manos para 4 a 8 jugadores— `call_basta(code, token)` pasa la ronda a `voting`. Quien pide «¡Basta!» no tiene que haber levantado la mano. Ninguna de las dos acepta un id de jugador ni un umbral. Sin mayoría, en otra fase o sin token, no cambian la ronda. Repetir «¡Basta!» en `voting` devuelve la misma ronda y no crea votos. La primera mano publica `round.hand_raised`: `code`, `number`, `name`, `ready_count` y `player_count`. El paso real a `voting` publica `round.phase_changed`. `round_state` añade `ready_count` y `ready`, los nombres con la mano levantada, sin carta ni rol. El socket acepta `round.raise_hand` y `round.basta` con el payload vacío y llama a esos servicios. No hay ruta para salir, iniciar ni abrir la conversación.
+
+Bajar la mano no está definida. Pasar `Game` a `in_progress` al abrir la ronda y los gestos de voto siguen fuera de este servicio. El snapshot de la sala no trae la carta; tras reconectar se vuelve a pedir con los GET.
+
+El recorrido de 4 a 8 jugadores está en `realtime/test/test_round_cycle.py`. `manage.py test` no abre Redis. No hay ruta para preparar la ronda: la prueba llama al dominio. La votación sigue en OOC-008.
 
 ### Sala y anfitrión
 
@@ -358,9 +366,9 @@ El cierre de la conversación, el paso a `voting` o `finished`, y la prohibició
 
 `get_room_state` devuelve el código, el estado, el anfitrión, los participantes y la cantidad. Admite incorporaciones si está en `waiting` y hay menos de 8. Puede empezar si está en `waiting` y hay entre 4 y 8. Quien tiene el código ve la misma representación. La respuesta no incluye la clave interna, el token, ni cartas, roles o votos.
 
-`POST /api/rooms/`, `GET /api/rooms/{code}/` y `POST /api/rooms/{code}/members/` delegan en esos servicios. Crear y unirse devuelven una vez el token del miembro; la consulta no lo incluye. No hay ruta para salir ni para iniciar. El contrato está en `contracts/api/rooms.md`.
+`POST /api/rooms/`, `GET /api/rooms/{code}/` y `POST /api/rooms/{code}/members/` delegan en esos servicios. Crear y unirse devuelven una vez el token del miembro; la consulta de la sala no lo incluye. `GET /api/rooms/{code}/round/` y `GET /api/rooms/{code}/card/` sí lo exigen y no cambian la sala. No hay ruta para salir ni para iniciar. El contrato está en `contracts/api/rooms.md`.
 
-`start_game` solo acepta el nombre del anfitrión. Con la sala bloqueada, exige `waiting` y entre 4 y 8 miembros, crea un `Game` en `preparing` y un `Participant` por miembro, guarda esa partida en la sala y la pasa a `started`. Otra llamada del anfitrión devuelve la misma partida. No llama a `create_piles`: no hay catálogo de 15 o 16 situaciones y el reglamento no dice qué carta se omite entre 4 y 6 jugadores. Tampoco llama a `prepare_round`. Esa preparación de la primera ronda queda en OOC-007, cuando las pilas existan.
+`start_game` solo acepta el nombre del anfitrión. Con la sala bloqueada, exige `waiting` y entre 4 y 8 miembros, crea un `Game` en `preparing` y un `Participant` por miembro, guarda esa partida en la sala y la pasa a `started`. Otra llamada del anfitrión devuelve la misma partida. No llama a `create_piles`: no hay catálogo de 15 o 16 situaciones y el reglamento no dice qué carta se omite entre 4 y 6 jugadores. Tampoco llama a `prepare_round`. Esa preparación desde la sala sigue pendiente del catálogo de situaciones. El dominio ya puede preparar la ronda cuando las pilas existen.
 
 El reglamento no reserva el resto de las acciones de juego a una sola persona. Indicar que se está listo o declarar el cierre cuando ya hay mayoría sigue siendo una regla de ronda de OOC-007, no un privilegio del anfitrión. Qué otras operaciones serían solo del anfitrión, la entrada con la partida ya iniciada y el acceso tardío siguen abiertos. Cerrar el socket no es abandonar la sala. El mismo token vuelve a entrar y recibe el estado público persistido, sin crear otro miembro ni otra partida. La reconexión durante una votación no está definida. No hay cuenta de usuario.
 
@@ -400,11 +408,23 @@ El servidor debe calcular esta condición utilizando las cartas realmente repart
 
 ## 10. Votación y puntuación
 
-La votación debe respetar el procedimiento simultáneo definido por el reglamento.
+`call_basta` deja la ronda en `voting` sin votos. Ahí cada participante tiene una sola elección, y `record_votes` solo la acepta en esa fase. En `prepared`, `conversation` o `finished` no crea filas.
 
-El backend valida que cada participante emita un voto permitido y que la votación solo pueda cerrarse en la fase correspondiente.
+Quien cree que pertenece a un equipo elige `point` y los participantes que señala. No puede señalarse ni repetir un objetivo. Señalar a alguien ajeno es una elección válida. Quien cree que es impostor elige `fist` (puño, jugar seguro) o `v` (V, arriesgar), sin objetivos.
 
-La evaluación y el cálculo de puntos deben ejecutarse en el servidor.
+La papeleta tiene que estar completa. Falta un jugador, hay dos elecciones del mismo jugador o el gesto no admite ese objetivo: `InvalidVote`. La misma papeleta no duplica filas. Una distinta se rechaza. `apply_round_scores` aplica `score_votes` y no cambia el estado de la ronda. El cierre de la conversación no puntúa.
+
+Al pasar a `voting`, el servidor guarda `vote_opened_at` y `vote_closes_at`, tres segundos después. Cada número dura un segundo: 3, 2, 1 y 0. `round.countdown` publica `code`, `number`, `mark`, `opened_at` y `closes_at`. No lleva gesto, objetivo, carta ni puntos. Repetir «¡Basta!» o reconectar no reescribe el plazo. El `GET` de la ronda devuelve esas fechas y la marca que corresponde al reloj del servidor.
+
+El cierre es `vote_closes_at`. Una papeleta con el reloj del servidor en ese instante o después se rechaza y no crea filas. Un evento puede llegar más tarde por el temporizador del proceso o por la red; esa demora no mueve el plazo. Durante `manage.py test` no se arma el temporizador: la prueba adelanta el reloj con `publish_due`.
+
+Mientras la ronda está en `voting` y todavía no hubo revelación, siguen ocultos la carta ajena, el rol, el gesto, los objetivos y los puntos. La carta propia sigue saliendo solo por `own_card`. `round_public_view` y el `GET` de la sala no incluyen esos campos.
+
+Después del 0, el reglamento muestra los gestos junto con las cartas y entonces se leen los puntos. Esta historia no publica esa revelación.
+
+El reglamento prohíbe abstenerse y no dice qué ocurre si alguien no envía la elección al llegar a 0. No se asigna un gesto por defecto ni se puntúa una papeleta incompleta. La revelación simultánea en una partida remota sigue abierta en el GDD.
+
+La evaluación y el cálculo de puntos se ejecutan en el servidor. El cliente no envía la puntuación oficial.
 
 ### Equipos
 

@@ -42,3 +42,27 @@ Un error tiene `code` y `detail`.
 ## Bloqueadas
 
 `POST /api/rooms/{code}/leave/` y `POST /api/rooms/{code}/start/` no existen. Abandonar la sala e iniciar la partida siguen en el dominio. El token no abre esas rutas; solo abre el socket de la sala.
+
+## Consultar la ronda
+
+- Método y ruta: `GET /api/rooms/{code}/round/?token=`
+- Autenticación: el `token` emitido al crear o al unirse. Un nombre o un id de jugador no lo sustituyen.
+- Permisos: un miembro de esa sala.
+- Cuerpo: ninguno.
+- Respuesta `200`: `number`, `status`, `participant_ids`, `dealt_count`, `discard_count`, `ready_count` y `ready`. `ready` son los nombres con la mano levantada. No incluye cartas, descartes, roles ni el token.
+- Errores: `401` `unauthorized`, `404` `room_not_found`, `404` `round_unavailable`.
+- Efecto: ninguno. Sirve para recuperar el estado público después de reconectar.
+- Idempotencia: la lectura no cambia la ronda.
+
+## Consultar la carta propia
+
+- Método y ruta: `GET /api/rooms/{code}/card/?token=`
+- Autenticación: el mismo `token`.
+- Permisos: el miembro de esa sala. La respuesta es solo su carta.
+- Cuerpo: ninguno.
+- Respuesta `200`: `number` y `text`.
+- Errores: `401` `unauthorized`, `404` `room_not_found`, `404` `card_unavailable`.
+- Efecto: ninguno.
+- Idempotencia: la lectura no reparte.
+
+`GET /api/rooms/{code}/` sigue sin token y sin carta. Levantar la mano y «¡Basta!» no tienen ruta: van por el socket.

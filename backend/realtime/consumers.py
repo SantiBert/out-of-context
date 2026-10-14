@@ -4,12 +4,21 @@ from urllib.parse import parse_qs
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 
+from games.deck import InvalidRoundState
+from games.rounds import NotReadyToClose
 from realtime.serializers import (
     ProtocolError,
     decode_client_message,
     encode_server_event,
 )
-from rooms.service import RoomNotFound, connection_access, get_room_state
+from rooms.service import (
+    RoomError,
+    RoomNotFound,
+    call_basta,
+    connection_access,
+    get_room_state,
+    raise_hand,
+)
 
 
 def room_group_name(code):
@@ -65,8 +74,13 @@ class RoomConsumer(AsyncWebsocketConsumer):
             await self._send_error("unauthorized", "La conexión no está autorizada.")
             await self.close()
             return
-        code_name, detail = _client_message_error(text_data)
-        await self._send_error(code_name, detail)
+        command, error = _client_command(text_data)
+        if error is not None:
+            await self._send_error(*error)
+            return
+        failure = await _apply_command(code, _query_token(self.scope), command)
+        if failure is not None:
+            await self._send_error(*failure)
 
     async def room_broadcast(self, event):
         await self.send(text_data=json.dumps(event["message"]))
@@ -98,18 +112,33 @@ def _query_token(scope):
     return values[0]
 
 
-def _client_message_error(text_data):
+def _client_command(text_data):
     if not isinstance(text_data, str):
-        return "invalid_message", "El mensaje debe ser un objeto."
+        return None, ("invalid_message", "El mensaje debe ser un objeto.")
     try:
         message = json.loads(text_data)
     except json.JSONDecodeError:
-        return "invalid_message", "El mensaje debe ser un objeto."
+        return None, ("invalid_message", "El mensaje debe ser un objeto.")
     try:
-        decode_client_message(message)
+        return decode_client_message(message), None
     except ProtocolError as error:
+        return None, (error.code, str(error))
+
+
+@database_sync_to_async
+def _apply_command(code, token, command):
+    try:
+        if command == "round.raise_hand":
+            raise_hand(code, token)
+        else:
+            call_basta(code, token)
+    except InvalidRoundState as error:
+        return "invalid_round", str(error)
+    except NotReadyToClose as error:
+        return "not_ready", str(error)
+    except RoomError as error:
         return error.code, str(error)
-    return "invalid_message", "El mensaje no cambia la sala."
+    return None
 
 
 @database_sync_to_async

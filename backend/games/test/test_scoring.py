@@ -1,6 +1,7 @@
 from django.core.exceptions import ValidationError
 from django.test import SimpleTestCase, TestCase
 
+from games.deck import InvalidRoundState
 from games.models import (
     CardCopy,
     DealtHand,
@@ -276,9 +277,16 @@ def dealt_round(assignments):
     return round_, players
 
 
+def voting_round(assignments):
+    round_, players = dealt_round(assignments)
+    round_.status = Round.Status.VOTING
+    round_.save(update_fields=["status"])
+    return round_, players
+
+
 class PersistScoreTests(TestCase):
     def test_applying_a_round_twice_does_not_duplicate_points(self):
-        round_, players = dealt_round(
+        round_, players = voting_round(
             [("Ana", 1), ("Luis", 1), ("Nora", 2), ("Otto", 3)]
         )
         record_votes(
@@ -304,14 +312,14 @@ class PersistScoreTests(TestCase):
             {player.pk: total_points(player) for player in players.values()},
             totals,
         )
-        self.assertEqual(round_.status, Round.Status.CONVERSATION)
+        self.assertEqual(round_.status, Round.Status.VOTING)
         self.assertEqual(dict(first)[players["Ana"].pk], 1)
         self.assertEqual(dict(first)[players["Luis"].pk], 0)
         self.assertEqual(dict(first)[players["Nora"].pk], 2)
         self.assertEqual(dict(first)[players["Otto"].pk], 1)
 
     def test_recording_the_same_votes_twice_does_not_add_rows(self):
-        round_, players = dealt_round([("Ana", 1), ("Luis", 1), ("Nora", 2)])
+        round_, players = voting_round([("Ana", 1), ("Luis", 1), ("Nora", 2)])
         votes = [
             VoteChoice(players["Ana"], POINT, (players["Luis"],)),
             VoteChoice(players["Luis"], POINT, (players["Ana"],)),
@@ -324,7 +332,7 @@ class PersistScoreTests(TestCase):
         self.assertEqual(round_.votes.count(), 3)
 
     def test_a_different_ballot_is_rejected(self):
-        round_, players = dealt_round([("Ana", 1), ("Luis", 1), ("Nora", 2)])
+        round_, players = voting_round([("Ana", 1), ("Luis", 1), ("Nora", 2)])
         record_votes(
             round_,
             [
@@ -346,6 +354,28 @@ class PersistScoreTests(TestCase):
 
         self.assertEqual(round_.votes.count(), 3)
         self.assertFalse(ScoreAward.objects.filter(round=round_).exists())
+
+    def test_a_ballot_outside_voting_is_rejected(self):
+        round_, players = dealt_round([("Ana", 1), ("Luis", 1)])
+        votes = [
+            VoteChoice(players["Ana"], POINT, (players["Luis"],)),
+            VoteChoice(players["Luis"], POINT, (players["Ana"],)),
+        ]
+        for status in (
+            Round.Status.PREPARED,
+            Round.Status.CONVERSATION,
+            Round.Status.FINISHED,
+        ):
+            with self.subTest(status=status):
+                round_.status = status
+                round_.save(update_fields=["status"])
+
+                with self.assertRaises(InvalidRoundState):
+                    record_votes(round_, votes)
+
+                self.assertEqual(round_.votes.count(), 0)
+                round_.refresh_from_db()
+                self.assertEqual(round_.status, status)
 
     def test_a_self_target_is_rejected_by_the_model(self):
         round_, players = dealt_round([("Ana", 1), ("Luis", 1)])

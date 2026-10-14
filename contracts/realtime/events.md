@@ -4,7 +4,7 @@ Todo mensaje es un objeto JSON con `type` y `payload`. No hay otros campos. El c
 
 `ws/health/` no emite estos eventos.
 
-Los seis tipos los emite solo el servidor. El payload de sala usa el estado público: `code`, `status`, `host`, `participants`, `player_count`, `accepting_members` y `can_start`. No incluye la clave del modelo, cartas, roles ni votos. `player_count` coincide con `participants` y `host` está en esa lista.
+Los tipos de sala y `connection.error` los emite solo el servidor. El payload de sala usa el estado público: `code`, `status`, `host`, `participants`, `player_count`, `accepting_members` y `can_start`. No incluye la clave del modelo, cartas, roles ni votos. `player_count` coincide con `participants` y `host` está en esa lista. `round.phase_changed` también lo emite solo el servidor y no lleva la carta.
 
 ## room.snapshot
 
@@ -41,12 +41,42 @@ Los seis tipos los emite solo el servidor. El payload de sala usa el estado púb
 - Payload: el estado público después de iniciar. No incluye el id de `Game`.
 - Cuándo se emite: después de que `start_game` crea la partida. También se emite `room.state_changed`. Repetir el inicio no emite nada. El cliente no puede iniciar por este evento.
 
+## round.phase_changed
+
+- Dirección: servidor al cliente.
+- Propósito: avisar que la ronda abierta cambió de fase.
+- Payload: `code`, `number`, `status`, `dealt_count` y `discard_count`. No incluye cartas, descartes, roles, token ni la clave de la ronda.
+- Cuándo se emite: después de que `begin_conversation` confirma el reparto (`status` `conversation`) y después de que `call_basta` confirma el cierre (`status` `voting`). El payload se vuelve a leer de la base. Repetir la llamada no emite otra vez. El cliente no puede declarar esta fase: ese mensaje es `server_only` y no cambia la ronda.
+
+## round.hand_raised
+
+- Dirección: servidor al cliente.
+- Propósito: avisar que un miembro levantó la mano.
+- Payload: `code`, `number`, `name`, `ready_count` y `player_count`. No incluye cartas, roles, token ni un umbral declarado por el cliente.
+- Cuándo se emite: después de que `raise_hand` registra esa mano por primera vez en la ronda. Repetirla no emite. El conteo lo calcula el servidor con `L × 2 > N`. El cliente no puede anunciar la mano: ese mensaje es `server_only`.
+
+## round.countdown
+
+- Dirección: servidor al cliente.
+- Propósito: mostrar la cuenta 3, 2, 1, 0 mientras la recepción sigue abierta.
+- Payload: `code`, `number`, `mark`, `opened_at` y `closes_at`. No incluye gesto, objetivo, carta, rol ni puntos.
+- Cuándo se emite: al pasar a `voting` sale el 3. Cada número dura un segundo y el 0 coincide con `closes_at`, tres segundos después de `opened_at`. Una marca ya emitida no se repite. Repetir «¡Basta!» o reconectar no reinicia el plazo. El cliente no puede declarar la cuenta: ese mensaje es `server_only`. El cierre autorizado es `closes_at`, aunque el evento llegue después.
+
 ## connection.error
 
 - Dirección: servidor al cliente.
 - Propósito: rechazar un mensaje.
 - Payload: `code` y `detail`.
-- Códigos: `invalid_message`, `unknown_type`, `server_only`, `room_not_found` y `unauthorized`.
-- Cuándo se emitiría: si falta `type` o `payload`, el tipo no existe, el payload no es válido o el cliente envía un evento de servidor.
+- Códigos: `invalid_message`, `unknown_type`, `server_only`, `room_not_found`, `unauthorized`, `invalid_round`, `not_ready` y `round_unavailable`.
+- Cuándo se emite: si falta `type` o `payload`, el tipo no existe, el payload trae campos, el cliente envía un evento de servidor, la fase no admite la acción, no hay mayoría o no hay ronda. El socket sigue abierto, salvo `room_not_found` y `unauthorized` al conectar o cuando el miembro ya no está.
 
-No hay rondas ni votación. No hay comandos del cliente hasta que exista un mecanismo de identidad.
+## Comandos del cliente
+
+Solo hay dos. El `payload` va vacío. La identidad es el `token` de la conexión, no un campo del mensaje.
+
+- `round.raise_hand`: pide `raise_hand`. Si es la primera vez, la sala recibe `round.hand_raised`.
+- `round.basta`: pide `call_basta`. Si el servidor calcula mayoría, la sala recibe `round.phase_changed` con `voting`.
+
+Un `round.hand_raised`, `round.phase_changed` o `round.countdown` entrante es `server_only` y no cambia la ronda. Estos comandos no envían la carta. Si el socket no vio la cuenta, `GET /api/rooms/{code}/round/` devuelve `vote_opened_at`, `vote_closes_at` y la marca del reloj del servidor. `GET /api/rooms/{code}/card/` sigue siendo solo la carta propia.
+
+Estos eventos no llevan gestos de voto ni puntuación. La conversación no tiene chat.

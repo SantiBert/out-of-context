@@ -6,7 +6,15 @@ SERVER_EVENT_TYPES = (
     "room.player_left",
     "room.state_changed",
     "game.started",
+    "round.phase_changed",
+    "round.hand_raised",
+    "round.countdown",
     "connection.error",
+)
+
+CLIENT_COMMANDS = (
+    "round.raise_hand",
+    "round.basta",
 )
 
 ROOM_EVENT_TYPES = (
@@ -89,6 +97,36 @@ class ConnectionErrorPayloadSerializer(_StrictSerializer):
     detail = serializers.CharField()
 
 
+class RoundPhasePayloadSerializer(_StrictSerializer):
+    code = serializers.CharField()
+    number = serializers.IntegerField(min_value=1)
+    status = serializers.CharField()
+    dealt_count = serializers.IntegerField(min_value=0)
+    discard_count = serializers.IntegerField(min_value=0)
+
+
+class RoundCountdownPayloadSerializer(_StrictSerializer):
+    code = serializers.CharField()
+    number = serializers.IntegerField(min_value=1)
+    mark = serializers.IntegerField(min_value=0, max_value=3)
+    opened_at = serializers.CharField()
+    closes_at = serializers.CharField()
+
+
+class RoundHandPayloadSerializer(_StrictSerializer):
+    code = serializers.CharField()
+    number = serializers.IntegerField(min_value=1)
+    name = serializers.CharField()
+    ready_count = serializers.IntegerField(min_value=1)
+    player_count = serializers.IntegerField(min_value=1)
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        if attrs["ready_count"] > attrs["player_count"]:
+            raise serializers.ValidationError("Hay más manos que jugadores.")
+        return attrs
+
+
 def decode_client_message(message):
     if not isinstance(message, dict):
         raise InvalidMessage("El mensaje debe ser un objeto.")
@@ -102,7 +140,11 @@ def decode_client_message(message):
         raise InvalidMessage("type debe ser texto y payload un objeto.")
     if event_type in SERVER_EVENT_TYPES:
         raise ServerOnly("Ese evento solo lo emite el servidor.")
-    raise UnknownType("El tipo de evento no existe.")
+    if event_type not in CLIENT_COMMANDS:
+        raise UnknownType("El tipo de evento no existe.")
+    if payload:
+        raise InvalidMessage("El comando no admite campos.")
+    return event_type
 
 
 def encode_server_event(event_type, payload):
@@ -117,6 +159,12 @@ def encode_server_event(event_type, payload):
 def _payload_serializer(event_type, payload):
     if event_type == "connection.error":
         return ConnectionErrorPayloadSerializer(data=payload)
+    if event_type == "round.phase_changed":
+        return RoundPhasePayloadSerializer(data=payload)
+    if event_type == "round.hand_raised":
+        return RoundHandPayloadSerializer(data=payload)
+    if event_type == "round.countdown":
+        return RoundCountdownPayloadSerializer(data=payload)
     if event_type in ("room.player_joined", "room.player_left"):
         return MembershipEventPayloadSerializer(
             data=payload,

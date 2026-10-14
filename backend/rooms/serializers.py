@@ -22,3 +22,21 @@ class RoomAccessSerializer(RoomStateSerializer):
 class RoomErrorSerializer(serializers.Serializer):
     code = serializers.CharField()
     detail = serializers.CharField()
+
+
+class RoundPublicSerializer(serializers.Serializer):
+    number = serializers.IntegerField()
+    status = serializers.CharField()
+    participant_ids = serializers.ListField(child=serializers.IntegerField())
+    dealt_count = serializers.IntegerField()
+    discard_count = serializers.IntegerField()
+    ready_count = serializers.IntegerField()
+    ready = serializers.ListField(child=serializers.CharField())
+    vote_opened_at = serializers.DateTimeField(allow_null=True)
+    vote_closes_at = serializers.DateTimeField(allow_null=True)
+    vote_mark = serializers.IntegerField(allow_null=True, min_value=0, max_value=3)
+
+
+class OwnCardSerializer(serializers.Serializer):
+    number = serializers.IntegerField()
+    text = serializers.CharField()

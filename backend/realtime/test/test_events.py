@@ -39,6 +39,27 @@ class ServerEventTests(SimpleTestCase):
             "room.player_left": left,
             "room.state_changed": PUBLIC_ROOM,
             "game.started": room_after_start(),
+            "round.phase_changed": {
+                "code": "AB12CD",
+                "number": 1,
+                "status": "conversation",
+                "dealt_count": 4,
+                "discard_count": 5,
+            },
+            "round.hand_raised": {
+                "code": "AB12CD",
+                "number": 1,
+                "name": "Ana",
+                "ready_count": 1,
+                "player_count": 4,
+            },
+            "round.countdown": {
+                "code": "AB12CD",
+                "number": 1,
+                "mark": 3,
+                "opened_at": "2026-10-14T03:00:00+00:00",
+                "closes_at": "2026-10-14T03:00:03+00:00",
+            },
             "connection.error": {
                 "code": "invalid_message",
                 "detail": "El payload no es válido.",
@@ -74,6 +95,45 @@ class ServerEventTests(SimpleTestCase):
                     encode_server_event("room.snapshot", payload)
                 self.assertEqual(raised.exception.code, "invalid_message")
 
+    def test_a_phase_payload_rejects_secret_fields(self):
+        payload = {
+            "code": "AB12CD",
+            "number": 1,
+            "status": "conversation",
+            "dealt_count": 4,
+            "discard_count": 5,
+            "card": "Una carta secreta",
+            "role": "impostor",
+        }
+        with self.assertRaises(InvalidMessage):
+            encode_server_event("round.phase_changed", payload)
+
+    def test_a_countdown_payload_rejects_secret_fields(self):
+        payload = {
+            "code": "AB12CD",
+            "number": 1,
+            "mark": 3,
+            "opened_at": "2026-10-14T03:00:00+00:00",
+            "closes_at": "2026-10-14T03:00:03+00:00",
+            "gesture": "fist",
+            "card": "Una carta secreta",
+        }
+        with self.assertRaises(InvalidMessage):
+            encode_server_event("round.countdown", payload)
+
+    def test_a_hand_payload_rejects_secret_fields(self):
+        payload = {
+            "code": "AB12CD",
+            "number": 1,
+            "name": "Ana",
+            "ready_count": 1,
+            "player_count": 4,
+            "card": "Una carta secreta",
+            "role": "impostor",
+        }
+        with self.assertRaises(InvalidMessage):
+            encode_server_event("round.hand_raised", payload)
+
     def test_an_unknown_server_type_is_rejected(self):
         with self.assertRaises(UnknownType) as raised:
             encode_server_event("round.dealt", PUBLIC_ROOM)
@@ -81,12 +141,73 @@ class ServerEventTests(SimpleTestCase):
 
 
 class ClientMessageTests(SimpleTestCase):
+    def test_a_client_cannot_declare_the_phase(self):
+        with self.assertRaises(ServerOnly) as raised:
+            decode_client_message(
+                {
+                    "type": "round.phase_changed",
+                    "payload": {
+                        "code": "AB12CD",
+                        "number": 1,
+                        "status": "voting",
+                        "dealt_count": 4,
+                        "discard_count": 5,
+                    },
+                }
+            )
+        self.assertEqual(raised.exception.code, "server_only")
+
+    def test_a_client_cannot_declare_the_countdown(self):
+        with self.assertRaises(ServerOnly) as raised:
+            decode_client_message(
+                {
+                    "type": "round.countdown",
+                    "payload": {
+                        "code": "AB12CD",
+                        "number": 1,
+                        "mark": 0,
+                        "opened_at": "2026-10-14T03:00:00+00:00",
+                        "closes_at": "2026-10-14T03:00:03+00:00",
+                    },
+                }
+            )
+        self.assertEqual(raised.exception.code, "server_only")
+
+    def test_a_client_cannot_declare_a_raised_hand(self):
+        with self.assertRaises(ServerOnly) as raised:
+            decode_client_message(
+                {
+                    "type": "round.hand_raised",
+                    "payload": {
+                        "code": "AB12CD",
+                        "number": 1,
+                        "name": "Ana",
+                        "ready_count": 4,
+                        "player_count": 4,
+                    },
+                }
+            )
+        self.assertEqual(raised.exception.code, "server_only")
+
     def test_a_server_event_from_the_client_is_rejected(self):
         with self.assertRaises(ServerOnly) as raised:
             decode_client_message(
                 {"type": "game.started", "payload": room_after_start()}
             )
         self.assertEqual(raised.exception.code, "server_only")
+
+    def test_a_command_accepts_only_an_empty_payload(self):
+        command = decode_client_message(
+            {"type": "round.raise_hand", "payload": {}},
+        )
+        self.assertEqual(command, "round.raise_hand")
+        with self.assertRaises(InvalidMessage):
+            decode_client_message(
+                {
+                    "type": "round.basta",
+                    "payload": {"ready_count": 4, "name": "Ana"},
+                },
+            )
 
     def test_an_unknown_type_is_rejected(self):
         with self.assertRaises(UnknownType) as raised:

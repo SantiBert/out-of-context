@@ -10,6 +10,7 @@ from games.models import (
     CardCopy,
     DealtHand,
     DiscardedCopy,
+    Game,
     GamePile,
     Round,
     RoundPile,
@@ -33,6 +34,14 @@ class InvalidPileSet(Exception):
 
 
 class InsufficientPiles(Exception):
+    pass
+
+
+class RoundStillOpen(Exception):
+    pass
+
+
+class GameFinished(Exception):
     pass
 
 
@@ -91,6 +100,11 @@ def available_piles(game):
 
 @transaction.atomic
 def start_round(game, rng: random.Random):
+    game = Game.objects.select_for_update().get(pk=game.pk)
+    if game.status == Game.Status.FINISHED:
+        raise GameFinished("La partida ya terminó.")
+    if game.rounds.exclude(status=Round.Status.FINISHED).exists():
+        raise RoundStillOpen("La ronda anterior sigue abierta.")
     config = deck_config(game.participants.count())
     if game.rounds.count() >= config.max_rounds:
         raise InsufficientPiles("No quedan pilas suficientes para otra ronda.")
@@ -142,6 +156,7 @@ def _validate_participants(round_, participants):
 
 @transaction.atomic
 def deal_round(round_, participants, rng: random.Random):
+    round_ = Round.objects.select_for_update().get(pk=round_.pk)
     if round_.status != Round.Status.PREPARED:
         raise InvalidRoundState("La ronda no admite un reparto.")
     if round_.dealt_hands.exists() or round_.discards.exists():

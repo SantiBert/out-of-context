@@ -4,8 +4,10 @@ from typing import NamedTuple
 from django.db import IntegrityError, transaction
 from django.db.models import Sum
 
+from games.deck import InvalidRoundState
 from games.models import Round, ScoreAward, Vote, VoteTarget
 from games.roles import classify_round
+from games.voting import vote_is_closed
 
 FIST = "fist"
 V = "v"
@@ -60,8 +62,12 @@ def score_votes(classification, votes):
 def record_votes(round_, votes):
     normalized = tuple(_identified(vote) for vote in votes)
     with transaction.atomic():
-        Round.objects.select_for_update().get(pk=round_.pk)
-        participants = set(round_.game.participants.values_list("pk", flat=True))
+        locked = Round.objects.select_for_update().get(pk=round_.pk)
+        if locked.status != Round.Status.VOTING:
+            raise InvalidRoundState("La ronda no admite votos.")
+        if vote_is_closed(locked):
+            raise InvalidRoundState("La votación ya cerró.")
+        participants = set(locked.game.participants.values_list("pk", flat=True))
         _validated_votes(participants, normalized)
         stored = _votes_for_round(round_)
         if stored:

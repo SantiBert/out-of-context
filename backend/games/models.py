@@ -136,6 +136,9 @@ class Round(ValidatedModel):
         choices=Status.choices,
         default=Status.PREPARED,
     )
+    vote_opened_at = models.DateTimeField(null=True, blank=True)
+    vote_closes_at = models.DateTimeField(null=True, blank=True)
+    vote_mark = models.PositiveSmallIntegerField(null=True, blank=True)
 
     class Meta:
         constraints = [
@@ -156,6 +159,32 @@ class Round(ValidatedModel):
         return CardCopy.objects.filter(card__round_piles__round=self).exclude(
             pk__in=self.dealt_copies().values("pk")
         )
+
+
+class RoundReady(ValidatedModel):
+    round = models.ForeignKey(
+        Round,
+        on_delete=models.CASCADE,
+        related_name="readies",
+    )
+    participant = models.ForeignKey(
+        "Participant",
+        on_delete=models.CASCADE,
+        related_name="readies",
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["round", "participant"],
+                name="unique_ready_per_round",
+            ),
+        ]
+
+    def clean(self):
+        if self.round_id and self.participant_id:
+            if self.participant.game_id != self.round.game_id:
+                raise ValidationError("El jugador no está en la partida de la ronda.")
 
 
 class RoundPile(ValidatedModel):

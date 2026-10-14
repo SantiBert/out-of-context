@@ -1,6 +1,8 @@
 import random
+import threading
 
-from django.test import TestCase
+from django.db import connections
+from django.test import TestCase, TransactionTestCase
 
 from games.deck import (
     InsufficientCards,
@@ -179,4 +181,39 @@ class DealRoundTests(TestCase):
         self.assertEqual(
             hand.pk,
             round_.dealt_hands.get(participant=participants[0]).card_copy_id,
+        )
+
+
+class ConcurrentDealTests(TransactionTestCase):
+    def test_two_deals_create_one_assignment(self):
+        game = prepared_game(4)
+        round_ = start_round(game, random.Random(1))
+        participants = list(game.participants.order_by("pk"))
+        barrier = threading.Barrier(2)
+        errors = []
+
+        def attempt():
+            try:
+                barrier.wait()
+                deal_round(round_, participants, random.Random(1))
+            except InvalidRoundState as error:
+                errors.append(error)
+            finally:
+                connections.close_all()
+
+        connections.close_all()
+        threads = [threading.Thread(target=attempt) for _index in range(2)]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+
+        round_.refresh_from_db()
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(round_.status, Round.Status.CONVERSATION)
+        self.assertEqual(round_.dealt_hands.count(), 4)
+        self.assertEqual(round_.discards.count(), 5)
+        self.assertEqual(
+            round_.dealt_hands.values("participant_id").distinct().count(),
+            4,
         )

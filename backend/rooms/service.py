@@ -1,11 +1,24 @@
 import hashlib
 import logging
+import random
 import secrets
+import sys
+import threading
 
 from django.core.exceptions import ValidationError
-from django.db import IntegrityError, transaction
+from django.db import IntegrityError, connections, transaction
+from django.utils import timezone
 
-from games.models import Game, Participant
+from games.deck import (
+    GameFinished,
+    InvalidRoundState,
+    deal_round,
+    private_hand,
+    round_public_view,
+)
+from games.models import DealtHand, Game, Participant, Round
+from games.rounds import declare_conversation_end, mark_ready
+from games.voting import countdown_mark, due_marks
 from rooms.models import (
     MAX_ROOM_MEMBERS,
     MIN_ROOM_MEMBERS,
@@ -62,6 +75,14 @@ class InvalidPlayerCount(RoomError):
     code = "invalid_player_count"
 
 
+class CardUnavailable(RoomError):
+    code = "card_unavailable"
+
+
+class RoundUnavailable(RoomError):
+    code = "round_unavailable"
+
+
 def create_room(name):
     cleaned = _clean_name(name)
     with transaction.atomic():
@@ -90,6 +111,117 @@ def join_room(code, name):
             raise RoomFull("La sala ya tiene 8 participantes.")
         _schedule_membership(room.code, "room.player_joined", cleaned_name, before)
         return member
+
+
+@transaction.atomic
+def begin_conversation(code, token):
+    member = _member_of_game(code, token)
+    game = Game.objects.select_for_update().get(pk=member.room.game_id)
+    if game.status == Game.Status.FINISHED:
+        raise GameFinished("La partida ya terminó.")
+    round_ = _open_round(game)
+    if round_ is None:
+        raise RoundUnavailable("No hay una ronda preparada.")
+    if round_.status == Round.Status.CONVERSATION:
+        return round_
+    if round_.status != Round.Status.PREPARED:
+        raise InvalidRoundState("La ronda no admite la conversación.")
+    participants = list(game.participants.order_by("pk"))
+    try:
+        dealt = deal_round(round_, participants, random.Random())
+    except InvalidRoundState:
+        round_.refresh_from_db()
+        if round_.status == Round.Status.CONVERSATION:
+            return round_
+        raise
+    _schedule_phase(member.room.code, dealt.pk)
+    return dealt
+
+
+@transaction.atomic
+def raise_hand(code, token):
+    member, participant, round_ = _round_actor(code, token)
+    round_ = Round.objects.select_for_update().get(pk=round_.pk)
+    existed = round_.readies.filter(participant=participant).exists()
+    mark_ready(round_, participant)
+    if not existed:
+        _schedule_hand(member.room.code, round_.pk, member.name)
+    return round_
+
+
+@transaction.atomic
+def call_basta(code, token):
+    member, participant, round_ = _round_actor(code, token)
+    round_ = Round.objects.select_for_update().get(pk=round_.pk)
+    before = round_.status
+    closed = declare_conversation_end(round_, participant)
+    if before != Round.Status.VOTING and closed.status == Round.Status.VOTING:
+        _schedule_phase(member.room.code, closed.pk, Round.Status.VOTING)
+    return closed
+
+
+def round_state(code, token):
+    member = _member_of_game(code, token)
+    round_ = _open_round(member.room.game)
+    if round_ is None:
+        raise RoundUnavailable("No hay una ronda en curso.")
+    view = round_public_view(round_)
+    view["vote_opened_at"] = round_.vote_opened_at
+    view["vote_closes_at"] = round_.vote_closes_at
+    view["vote_mark"] = countdown_mark(round_)
+    view["ready_count"] = round_.readies.count()
+    view["ready"] = list(
+        round_.readies.order_by("participant__name").values_list(
+            "participant__name",
+            flat=True,
+        )
+    )
+    return view
+
+
+def _round_actor(code, token):
+    member = _member_of_game(code, token)
+    participant = member.room.game.participants.filter(name=member.name).first()
+    round_ = _open_round(member.room.game)
+    if participant is None or round_ is None:
+        raise RoundUnavailable("No hay una ronda para este jugador.")
+    return member, participant, round_
+
+
+def _member_of_game(code, token):
+    member = member_for_token(code, token)
+    if member is None or member.room.game_id is None:
+        raise RoundUnavailable("No hay una ronda para este jugador.")
+    return member
+
+
+def _open_round(game):
+    return game.rounds.exclude(status=Round.Status.FINISHED).order_by("-number").first()
+
+
+def own_card(code, token):
+    member = member_for_token(code, token)
+    if member is None or member.room.game_id is None:
+        raise CardUnavailable("No hay una carta para este jugador.")
+    participant = member.room.game.participants.filter(name=member.name).first()
+    round_ = _open_dealt_round(member.room.game)
+    if participant is None or round_ is None:
+        raise CardUnavailable("No hay una carta para este jugador.")
+    try:
+        card_copy = private_hand(round_, participant)
+    except DealtHand.DoesNotExist:
+        raise CardUnavailable("No hay una carta para este jugador.") from None
+    return {"number": card_copy.card.number, "text": card_copy.card.text}
+
+
+def _open_dealt_round(game):
+    return (
+        game.rounds.filter(
+            status__in=(Round.Status.CONVERSATION, Round.Status.VOTING),
+        )
+        .order_by("-number")
+        .first()
+    )
 
 
 def member_for_token(code, token):
@@ -258,6 +390,120 @@ def _public_change(before, after):
         after.accepting_members,
         after.can_start,
     )
+
+
+def _schedule_phase(code, round_id, status=Round.Status.CONVERSATION):
+    def send():
+        try:
+            from realtime.publish import publish_room_events
+
+            round_ = Round.objects.filter(pk=round_id).first()
+            if round_ is None or round_.status != status:
+                return
+            events = [("round.phase_changed", _phase_payload(code, round_))]
+            if status == Round.Status.VOTING:
+                events.extend(claim_due(code, round_.pk))
+                arm_countdown(code, round_.pk)
+            publish_room_events(code, events)
+        except Exception:
+            logger.exception("No se publicaron los eventos de la sala %s.", code)
+
+    transaction.on_commit(send)
+
+
+def claim_due(code, round_id, now=None):
+    current = timezone.now() if now is None else now
+    with transaction.atomic():
+        round_ = Round.objects.select_for_update().filter(pk=round_id).first()
+        if round_ is None or round_.status != Round.Status.VOTING:
+            return []
+        marks = due_marks(round_, current)
+        if not marks:
+            return []
+        events = []
+        for mark in marks:
+            round_.vote_mark = mark
+            events.append(("round.countdown", _countdown_payload(code, round_, mark)))
+        round_.save(update_fields=["vote_mark"])
+        return events
+
+
+def publish_due(code, round_id, now=None):
+    events = claim_due(code, round_id, now)
+    if events:
+        from realtime.publish import publish_room_events
+
+        publish_room_events(code, events)
+    return events
+
+
+def arm_countdown(code, round_id):
+    if "test" in sys.argv:
+        return
+    for delay in (1, 2, 3):
+        timer = threading.Timer(delay, _timer_publish, args=(code, round_id))
+        timer.daemon = True
+        timer.start()
+
+
+def _timer_publish(code, round_id):
+    try:
+        publish_due(code, round_id)
+    except Exception:
+        logger.exception("No se publicó la cuenta de la sala %s.", code)
+    finally:
+        connections.close_all()
+
+
+def _countdown_payload(code, round_, mark):
+    return {
+        "code": code,
+        "number": round_.number,
+        "mark": mark,
+        "opened_at": round_.vote_opened_at.isoformat(),
+        "closes_at": round_.vote_closes_at.isoformat(),
+    }
+
+
+def _schedule_hand(code, round_id, name):
+    def send():
+        try:
+            from realtime.publish import publish_room_events
+
+            round_ = Round.objects.filter(pk=round_id).first()
+            if round_ is None or round_.status != Round.Status.CONVERSATION:
+                return
+            if not round_.readies.filter(participant__name=name).exists():
+                return
+            publish_room_events(
+                code,
+                [("round.hand_raised", _hand_payload(code, round_, name))],
+            )
+        except Exception:
+            logger.exception("No se publicaron los eventos de la sala %s.", code)
+
+    transaction.on_commit(send)
+
+
+def _hand_payload(code, round_, name):
+    return {
+        "code": code,
+        "number": round_.number,
+        "name": name,
+        "ready_count": round_.readies.count(),
+        "player_count": round_.game.participants.count(),
+    }
+
+
+def _phase_payload(code, round_):
+    view = round_public_view(round_)
+    return {
+        "code": code,
+        "number": view["number"],
+        "status": view["status"],
+        "dealt_count": view["dealt_count"],
+        "discard_count": view["discard_count"],
+    }
 
 
 def _schedule_events(code, notices):

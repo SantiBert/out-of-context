@@ -59,8 +59,8 @@
 | OOC-004 | Implementar modelos y lógica central del juego | P0 | DONE | OOC-001, OOC-003 |
 | OOC-005 | Implementar salas y gestión de partidas | P0 | IN_PROGRESS | OOC-003, OOC-004 |
 | OOC-006 | Implementar comunicación en tiempo real | P0 | IN_PROGRESS | OOC-005 |
-| OOC-007 | Implementar el flujo de una ronda | P0 | TODO | OOC-004, OOC-006 |
-| OOC-008 | Implementar votación y puntuación | P0 | TODO | OOC-004, OOC-007 |
+| OOC-007 | Implementar el flujo de una ronda | P0 | IN_PROGRESS | OOC-004, OOC-006 |
+| OOC-008 | Implementar votación y puntuación | P0 | IN_PROGRESS | OOC-004, OOC-007 |
 | OOC-009 | Implementar la interfaz principal en React Native | P0 | TODO | OOC-002, OOC-001 |
 | OOC-010 | Integrar cliente y backend | P0 | TODO | OOC-005, OOC-006, OOC-009 |
 | OOC-011 | Implementar el cierre y los resultados de la partida | P1 | TODO | OOC-008, OOC-010 |
@@ -413,12 +413,12 @@ La verificación no cambió las reglas. Ruff, `manage.py check`, `makemigrations
 - [x] La tabla de puntuación y las operaciones repetidas de reparto, votos y premios siguen cubiertas.
 - [x] Los casos que esta épica no implementa quedan enumerados abajo.
 
-Quedan fuera de OOC-004, sin servicio que cambiar:
+Quedan fuera de OOC-004, sin servicio que cambiar en esa épica:
 
-- El cierre de la conversación cuando más de la mitad está listo, y su continuación en caso contrario.
+- El cierre de la conversación cuando más de la mitad está listo, y su continuación en caso contrario. OOC-007.1 añade el listo y el paso a `voting`.
 - Marcar la partida como terminada al agotar las pilas, y elegir a todos los jugadores empatados en la puntuación máxima. `start_round` solo impide preparar otra ronda.
-- Avanzar una ronda a `voting` o `finished`.
-- Impedir una ronda nueva mientras la anterior sigue abierta.
+- Avanzar una ronda a `finished`. OOC-007.1 no lo hace: la puntuación sigue sin mover el estado.
+- Impedir una ronda nueva mientras la anterior sigue abierta. OOC-007.1 lo rechaza en `start_round`.
 
 Siguen abiertas las decisiones del reglamento sobre el reparto digital, la conversación, la revelación simultánea y los detalles de impostor que el texto no incluye. OOC-001.6 no se cierra con esta historia.
 
@@ -653,3 +653,162 @@ Varios sockets y la API recorren la misma sala. Las pruebas anteriores se conser
 - [x] Reconectar no duplica miembros. Un mensaje inválido no crea participantes.
 - [x] Si el envío falla, el alta queda en `GET` y el snapshot posterior la incluye.
 - [x] Los mensajes no llevan token, clave interna, carta, rol ni voto.
+
+## OOC-007 — Implementar el flujo de una ronda
+
+**Prioridad:** P0  
+**Estado:** IN_PROGRESS  
+**Dependencias:** OOC-004, OOC-006  
+**Objetivo:** recorrer una ronda con las transiciones que el reglamento ya fija, sin reimplementar el mazo ni la puntuación.
+
+### OOC-007.1 — Definir estados y transiciones de las rondas
+
+**Prioridad:** P0  
+**Estado:** DONE  
+**Dependencias:** OOC-004, OOC-005
+
+Los estados siguen siendo `prepared`, `conversation`, `voting` y `finished`. `start_round` no abre otra ronda si queda alguna abierta. En conversación, un participante puede quedar listo. Con `L × 2 > N`, cualquier participante declara el cierre y la ronda pasa a `voting`. No hay votos ni puntos en ese paso. No hay ruta HTTP.
+
+**Criterios de aceptación:**
+
+- [x] Una ronda en `prepared`, `conversation` o `voting` impide crear la siguiente. En `finished`, `start_round` puede crear otra.
+- [x] Quedar listo no cierra la conversación y no se duplica. Sin mayoría, el cierre no cambia el estado.
+- [x] Con la mayoría, el cierre pasa a `voting` y no crea votos. Repetirlo devuelve la misma ronda.
+- [x] Alguien que no juega la partida, o una ronda que no está en conversación, no deja listos ni votos.
+- [ ] Siguen abiertos bajar la mano, pasar `Game` a `in_progress` al abrir la ronda, la reconexión durante la votación, el catálogo de situaciones, el paso a `finished` y los gestos de voto.
+
+Queda fuera de esta historia el encadenamiento automático de la siguiente ronda después de puntuar. Corresponde a OOC-008 y OOC-011.
+
+### OOC-007.2 — Preparar rondas usando montones disponibles
+
+**Prioridad:** P0  
+**Estado:** DONE  
+**Dependencias:** OOC-004, OOC-007.1
+
+`start_round` bloquea la partida y elige montones libres: 3 para 4–6 jugadores y 4 para 7–8. La ronda queda en `prepared` para el reparto. No hay ruta HTTP ni catálogo de situaciones, así que la sala no llama a este servicio.
+
+**Criterios de aceptación:**
+
+- [x] Cada cantidad de 4 a 8 elige solo montones no usados y la vista pública no lleva la carta.
+- [x] Sin montones, en el tope de rondas o con la partida `finished`, no se abre otra ronda.
+- [x] Una segunda llamada, o dos a la vez, deja una sola ronda y no consume montones de más.
+- [x] La ronda preparada se puede repartir. La partida no pasa a `in_progress`.
+- [ ] Siguen abiertos el catálogo, el paso de la partida a `in_progress` y llamar a este servicio desde la sala.
+
+### OOC-007.3 — Repartir cartas y proteger la información secreta
+
+**Prioridad:** P0  
+**Estado:** DONE  
+**Dependencias:** OOC-004, OOC-007.2, OOC-006.5
+
+`deal_round` sigue repartiendo una carta por participante y deja el resto como descarte. Bloquea la ronda, así que un reintento no genera otro reparto. `own_card(code, token)` devuelve solo `number` y `text` de la carta de ese miembro mientras la ronda abierta está en `conversation` o `voting`. No hay ruta HTTP ni evento de sala con la carta.
+
+**Criterios de aceptación:**
+
+- [x] Cada participante válido recibe una carta y las sobrantes quedan como descartes ocultos.
+- [x] Un segundo reparto, o dos a la vez, no crea otra asignación.
+- [x] El token del miembro lee su carta. Un id de jugador, un token ajeno o una ronda sin mano no devuelven cartas.
+- [x] La vista pública, la consulta de la sala y los eventos no incluyen la carta, los descartes ni los roles.
+- [ ] Siguen abiertos el catálogo, el paso de la partida a `in_progress` y publicar esta lectura.
+
+### OOC-007.4 — Implementar la fase de conversación
+
+**Prioridad:** P0  
+**Estado:** DONE  
+**Dependencias:** OOC-006, OOC-007.3
+
+`begin_conversation(code, token)` abre la conversación con el reparto ya existente. Repetirla no reinicia la ronda ni crea otra. `round_state` devuelve el estado público y `own_card` sigue entregando la carta solo a ese miembro. El paso a `conversation` publica `round.phase_changed`. No hay chat, ni ruta HTTP, ni votos ni puntuación nuevos.
+
+**Criterios de aceptación:**
+
+- [x] Una ronda `prepared` de una partida no terminada pasa a `conversation` y publica el cambio de fase sin cartas.
+- [x] Repetir la transición no reparte de nuevo, no abre otra ronda y no emite otro evento.
+- [x] Un token inválido, una partida `finished` o una ronda en `voting` no cambian el estado.
+- [x] `round_state` no incluye la carta. `own_card` sigue devolviendo la del miembro.
+- [ ] Siguen abiertos el catálogo, el paso de la partida a `in_progress` y publicar la lectura de la carta.
+
+### OOC-007.5 — Implementar manos levantadas y la señal Basta
+
+**Prioridad:** P0  
+**Estado:** DONE  
+**Dependencias:** OOC-007.1, OOC-007.4
+
+`raise_hand(code, token)` y `call_basta(code, token)` usan el umbral `L × 2 > N` que ya calcula el dominio. El cliente no envía el umbral ni un id de jugador. La primera mano publica `round.hand_raised`. El cierre válido publica `round.phase_changed` con `voting`. No hay votos ni puntuación. Bajar la mano sigue sin estar definida.
+
+**Criterios de aceptación:**
+
+- [x] Cada jugador cuenta una vez. 4 a 8 jugadores exigen 3, 3, 4, 4 y 5 manos.
+- [x] Sin mayoría, con un token ajeno o en otra fase, la ronda no cambia.
+- [x] «¡Basta!» válido pasa a `voting` una sola vez y no crea votos. Repetirlo no emite.
+- [x] Los eventos y `round_state` no incluyen cartas ni roles.
+- [ ] Siguen abiertos bajar la mano, el catálogo, el paso a `in_progress` y la votación de OOC-008.
+
+### OOC-007.6 — Integrar el flujo de rondas con REST y WebSockets
+
+**Prioridad:** P0  
+**Estado:** DONE  
+**Dependencias:** OOC-006.5, OOC-007.5
+
+`GET /api/rooms/{code}/round/?token=` y `GET /api/rooms/{code}/card/?token=` exponen el estado público y la carta propia. El socket acepta `round.raise_hand` y `round.basta` y delega en el dominio. El `GET` de la sala y los eventos de grupo siguen sin la carta. No hay votación ni ruta para abrir la conversación.
+
+**Criterios de aceptación:**
+
+- [x] La carta solo sale en su GET. El estado de la ronda y el snapshot de la sala no la incluyen.
+- [x] La mano y «¡Basta!» llegan como eventos públicos. Un evento de servidor entrante no cambia la ronda.
+- [x] Token ajeno, fase incorrecta, ronda ausente y umbral corto responden con `code` y `detail` y no cambian la ronda.
+- [x] Cerrar el socket y volver a abrir deja los dos GET como recuperación.
+- [ ] Siguen abiertos el catálogo, `in_progress`, bajar la mano y la votación de OOC-008.
+
+### OOC-007.7 — Pruebas de integración del ciclo de rondas
+
+**Prioridad:** P0  
+**Estado:** DONE  
+**Dependencias:** OOC-007.6
+
+`realtime/test/test_round_cycle.py` recorre la ronda publicada para 4 a 8 jugadores. La sala se crea por la API. Preparar y abrir la conversación llaman al dominio: no hay ruta para eso. `manage.py test` no abre Redis. La votación sigue en OOC-008.
+
+**Criterios de aceptación:**
+
+- [x] De 4 a 8 jugadores, la ronda llega a `voting` con una carta por participante. Cada `GET` de carta es solo la de ese token. El de la ronda y el de la sala no la incluyen. Queda una ronda y ningún voto.
+- [x] «¡Basta!» antes del umbral deja la ronda en `conversation`. Quien no levantó la mano cierra al llegar a 3, 3, 4, 4 o 5 manos.
+- [x] Montones agotados y una partida sin pilas no abren otra ronda. Repetir la mano y «¡Basta!» no duplica. Dos «¡Basta!» a la vez dejan un solo `voting`.
+- [x] El token de otra sala y la fase `prepared` no cambian nada. Cerrar el socket deja los dos `GET`. Un `round.hand_raised` entrante no reparte ni suma manos.
+- [ ] `manage.py test` no abre Redis. No hay ruta para preparar la ronda. La votación sigue en OOC-008.
+
+## OOC-008 — Implementar votación y puntuación
+
+**Prioridad:** P0  
+**Estado:** IN_PROGRESS  
+**Dependencias:** OOC-004, OOC-007  
+**Objetivo:** registrar la votación simultánea y la puntuación que el reglamento ya fija.
+
+### OOC-008.1 — Definir el modelo y las reglas de votación
+
+**Prioridad:** P0  
+**Estado:** DONE  
+**Dependencias:** OOC-004, OOC-007
+
+`Vote`, `VoteTarget` y `score_votes` siguen siendo la elección y la puntuación. `record_votes` solo acepta una ronda en `voting`. No hay ruta, comando ni temporizador.
+
+**Criterios de aceptación:**
+
+- [x] `point` señala participantes. `fist` y `v` no señalan a nadie. Una papeleta incompleta o repetida no se guarda.
+- [x] Fuera de `voting` no se crean votos. La misma papeleta no duplica. Puntuar no cambia el estado.
+- [x] Durante `voting`, la vista pública no incluye carta ajena, rol, gesto, objetivo ni puntos.
+- [ ] Siguen abiertos qué ocurre si alguien no elige al llegar a 0 y la revelación simultánea. La cuenta dura un segundo por número y cierra a los tres; quedó en OOC-008.2.
+
+### OOC-008.2 — Implementar el ciclo de vida y la cuenta regresiva de votación
+
+**Prioridad:** P0  
+**Estado:** DONE  
+**Dependencias:** OOC-008.1, OOC-006, OOC-007
+
+Al pasar a `voting` se guardan `vote_opened_at` y `vote_closes_at`. La cuenta publica `round.countdown` desde 3 hasta 0, un segundo por número, y el cierre es el instante guardado. Repetir la apertura o reconectar no reinicia el plazo. No hay worker ni gesto por defecto.
+
+**Criterios de aceptación:**
+
+- [x] La cuenta solo se abre al entrar en `voting`. Una segunda llamada no cambia las fechas.
+- [x] Se publican las marcas 3, 2, 1 y 0 una sola vez, sin gesto, carta ni puntos.
+- [x] Una papeleta en `vote_closes_at` o después no se guarda. El cliente no puede declarar la cuenta.
+- [x] Cerrar el socket y volver a consultar deja el mismo `vote_opened_at` y la marca del reloj del servidor.
+- [ ] Siguen abiertos el voto ausente al llegar a 0 y la revelación simultánea. `manage.py test` no arma el temporizador.
