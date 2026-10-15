@@ -23,6 +23,7 @@ from games.scoring import (
     close_vote,
     reveal_results,
     submit_vote,
+    total_points,
 )
 from games.voting import countdown_mark, due_marks
 from rooms.models import (
@@ -218,6 +219,20 @@ def stored_results(code, token):
     if not round_.score_awards.exists():
         raise ResultsUnavailable("Los resultados todavía no están disponibles.")
     return reveal_results(round_)
+
+
+def scoreboard(code, token):
+    member = _member_of_game(code, token)
+    game = member.room.game
+    participants = list(game.participants.order_by("pk"))
+    standings = [
+        {"name": player.name, "points": total_points(player)} for player in participants
+    ]
+    payload = {"status": game.status, "standings": standings}
+    if game.status == Game.Status.FINISHED:
+        top = max((row["points"] for row in standings), default=0)
+        payload["winners"] = [row["name"] for row in standings if row["points"] == top]
+    return payload
 
 
 def _round_actor(code, token):

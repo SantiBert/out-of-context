@@ -348,12 +348,34 @@ Antes de considerar terminada la implementación de las reglas, se deberán prob
 Este documento recoge las reglas que se han podido reconstruir a partir del reglamento compartido. Antes de cerrar OOC-001, deben resolverse las siguientes cuestiones:
 
 1. **Distribución de cartas:** confirmar que la selección de pilas y el reparto aleatorio pueden representarse digitalmente sin cambiar las probabilidades del juego físico.
-2. **Interfaz de conversación:** definir cómo se representa la conversación en partidas presenciales y remotas. La interfaz no debe revelar información secreta.
+2. **Interfaz de conversación:** sigue abierta. El modo de un solo dispositivo está descrito en la sección 16 y no exige manos ni «¡Basta!» en la aplicación. Falta decidir si ese dispositivo debe comprobar `L × 2 > N`. La conversación remota no está definida. En ambos casos la interfaz no debe revelar información secreta.
 3. **Votación digital:** resuelta. La elección se registra con `POST /api/rooms/{code}/vote/?token=`. Al llegar a 0 el servidor revela a la vez `round.revealed`. Cada jugador trae `name`, `card` (`number` y `text`), `gesture`, `targets`, `points` y `recognized_by` o `pointed_by`. No hay un campo de rol ni un texto de la fórmula. Quien no eligió suma 0, con `gesture` null y `targets` vacío, y sigue en las rondas siguientes.
 4. **Condición de puntuación del equipo:** resuelta. Un compañero cuenta si su señalamiento incluye al jugador, aunque la identificación de ese compañero esté incompleta o incluya a alguien ajeno. Vale para equipos de dos y de tres.
 5. **Estrategias del impostor:** verificar cualquier detalle adicional del reglamento original que no esté incluido en el texto disponible.
 
-Las decisiones de arquitectura, conectividad, persistencia y seguridad se documentarán por separado en `docs/ARCHITECTURE.md`. Las tareas de implementación se gestionarán en `docs/BACKLOG.md`.
+Las decisiones de arquitectura, conectividad, persistencia y seguridad están en `docs/ARCHITECTURE.md`. El modo presencial de un solo dispositivo está en la sección 16. Las tareas de implementación se gestionan en `docs/BACKLOG.md`.
+
+## 16. Modo presencial de un solo dispositivo
+
+Modo de producto para una mesa con un solo teléfono. No agrega reglas al reglamento. El detalle está en `docs/MODO_PRESENCIAL.md`. La épica es OOC-015 y no está implementada. Esta sección no cierra OOC-001.
+
+### Alcance
+
+Una persona anota de 4 a 8 nombres en el dispositivo. Con esa lista se preparan y se reparten las pilas según las reglas ya escritas. El teléfono muestra la carta de un solo jugador y la oculta con una acción explícita antes de pasar al siguiente. La conversación y el gesto ocurren en la mesa. Después, el dispositivo registra lo que ya se vio, permite corregirlo antes de confirmar y calcula el resultado con la puntuación existente. Si quedan pilas, la ronda siguiente vuelve a repartirse en secreto. Si no alcanzan, la partida termina y ganan quienes empatan en el máximo.
+
+### Reglas compartidas con el online
+
+Pilas, reparto, roles, conversación, cierre, voto, puntos, marcador y final son las secciones 4 a 12 y RF-001 a RF-018. La referencia implementada sigue en `backend/games/`. El teléfono no puede importar ese código.
+
+### Diferencias
+
+En el online cada teléfono es un miembro, con sala, token y socket. La mano, «¡Basta!» y la cuenta las lleva el servidor. Si al llegar a 0 alguien no envió elección, la ronda digital cierra igual y esa persona suma 0.
+
+En el presencial hay una sola lista de nombres y no hay código de sala. La aplicación no pide manos ni «¡Basta!». La corrección de una elección es previa a la confirmación. El resultado muestra el mismo contenido de revelación: nombre, carta, gesto, señalados, puntos y una sola explicación.
+
+### Pendiente
+
+Siguen sin decidirse, y esta sección no los convierte en regla: el catálogo de 15 o 16 situaciones, si el dispositivo comprueba `L × 2 > N`, qué ocurre si falta un gesto al confirmar, señalar a tres o más personas, quién confirma, si durante la carga se muestran las cartas, el orden visual del marcador, el orden en que se pasa el teléfono y si una carta ya oculta puede verse otra vez. La carta visible al cerrar la aplicación, abandonar, reiniciar, descartar y el momento de borrar la partida terminada están en `docs/PERSISTENCIA_PRESENCIAL.md` como propuestas. La navegación está en `docs/NAVEGACION_PRESENCIAL.md`.
 
 ---
 

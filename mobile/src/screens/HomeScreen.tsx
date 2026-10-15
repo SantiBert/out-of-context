@@ -1,22 +1,34 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { View } from 'react-native';
+
+import { Button } from '../components/Button';
+import { Heading } from '../components/Heading';
+import { HelperText } from '../components/HelperText';
+import { screenStyles } from '../components/screenStyles';
+import { useAppNavigation } from '../hooks/useAppNavigation';
 
 export const appTitle = 'Out Of Context';
 
 export function HomeScreen() {
+  const navigation = useAppNavigation();
+
   return (
-    <View style={styles.container}>
-      <Text>{appTitle}</Text>
-      <StatusBar style="auto" />
+    <View style={screenStyles.container}>
+      <Heading>Inicio</Heading>
+      <HelperText>{appTitle}</HelperText>
+      <Button
+        label="Crear sala"
+        onPress={() => navigation.navigate('CreateRoom')}
+      />
+      <Button
+        label="Unirse"
+        variant="secondary"
+        onPress={() => navigation.navigate('JoinRoom')}
+      />
+      <Button
+        label="Componentes"
+        variant="secondary"
+        onPress={() => navigation.navigate('Catalog')}
+      />
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});

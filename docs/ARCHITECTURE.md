@@ -37,7 +37,6 @@ La arquitectura prioriza:
 
 Las siguientes decisiones deben confirmarse antes de que condicionen la implementación:
 
-- Biblioteca de navegación.
 - Estrategia de gestión de estado del cliente.
 - Mecanismo de autenticación.
 - Capa de almacenamiento del estado temporal de las partidas.
@@ -70,9 +69,19 @@ Expo encaja con el alcance actual: una aplicación Android nueva, sin código na
 - La inicialización usa la plantilla TypeScript dentro de `mobile/`.
 - El gestor de paquetes del cliente es npm. Se conserva `package-lock.json`.
 - El directorio `android/` se genera con `prebuild`. Se mantiene a mano solo cuando una necesidad nativa posterior lo requiera. Los directorios generados `mobile/android/` y `mobile/ios/` no se versionan.
-- La navegación, el estado del cliente y la autenticación siguen abiertos.
+- La estrategia general de estado del cliente y la autenticación de usuario siguen abiertas. La sesión de invitado de una sala queda descrita en la sección de navegación.
 - El entorno de desarrollo continuo es un development build. Expo Go queda limitado a las dependencias incluidas en su runtime.
 - EAS Build no forma parte del entorno local obligatorio.
+
+### Navegación del cliente
+
+**Estado:** decisión aprobada. El cliente usa React Navigation con un stack nativo (`@react-navigation/native` y `@react-navigation/native-stack`), más `react-native-screens` y `react-native-safe-area-context`, en las versiones que alinea Expo.
+
+No se usa Expo Router. Las rutas están declaradas en `mobile/src/navigation/`, que es la estructura ya prevista para la aplicación. El stack nativo aporta el gesto de volver sin añadir un enrutador por archivos.
+
+Las pantallas iniciales son Inicio, Crear sala, Unirse, Lobby, Carta secreta, Conversación, Votación, Resultados y Marcador. Sus parámetros de ruta están vacíos: no viajan token, carta, rol ni puntos. Una acción no reconocida o un estado con un nombre de ruta desconocido vuelve a Inicio. Esa recuperación no aplica reglas de la partida.
+
+Crear sala y unirse envían solo el nombre. El token que devuelve el servidor se guarda en el almacén seguro del dispositivo y en un contexto de React, junto con el nombre visible y el código de la sala. El lobby muestra ese nombre y el código de invitación devuelto. No hay cuenta de usuario ni ruta de login.
 
 ## 3. Estructura del monorepo
 
@@ -123,7 +132,7 @@ Documenta los contratos HTTP y los eventos en tiempo real compartidos entre el c
 
 **`docs/`**
 
-Contiene la arquitectura, las reglas del juego, el backlog y las decisiones técnicas relevantes.
+Contiene la arquitectura, las reglas del juego, el backlog y las decisiones técnicas relevantes. `MODO_PRESENCIAL.md` define el modo de un solo dispositivo. `ARQUITECTURA_PRESENCIAL.md` describe cómo correría en el teléfono. `PERSISTENCIA_PRESENCIAL.md` fija qué se guarda y qué sigue pendiente al reanudar. `NAVEGACION_PRESENCIAL.md` fija qué pantalla corresponde a cada fase. Ninguna de las cuatro está implementada.
 
 **`infra/`**
 
@@ -161,7 +170,7 @@ El sistema sigue una arquitectura cliente-servidor.
              v
          PostgreSQL
 
-HTTP y WebSockets deben utilizar las mismas reglas de autorización y las mismas operaciones de negocio. No deben existir dos implementaciones independientes de las reglas del juego.
+HTTP y WebSockets deben utilizar las mismas reglas de autorización y las mismas operaciones de negocio. No deben existir dos implementaciones independientes de las reglas del juego. La excepción, todavía sin código, está en `ARQUITECTURA_PRESENCIAL.md`: el modo sin conexión solo puede repetir en TypeScript el núcleo puro ya testeado en Django. El online no lo usa.
 
 La aplicación móvil nunca se conecta directamente a PostgreSQL.
 
@@ -366,11 +375,11 @@ El recorrido de 4 a 8 jugadores está en `realtime/test/test_round_cycle.py`. `m
 
 `get_room_state` devuelve el código, el estado, el anfitrión, los participantes y la cantidad. Admite incorporaciones si está en `waiting` y hay menos de 8. Puede empezar si está en `waiting` y hay entre 4 y 8. Quien tiene el código ve la misma representación. La respuesta no incluye la clave interna, el token, ni cartas, roles o votos.
 
-`POST /api/rooms/`, `GET /api/rooms/{code}/` y `POST /api/rooms/{code}/members/` delegan en esos servicios. Crear y unirse devuelven una vez el token del miembro; la consulta de la sala no lo incluye. `GET /api/rooms/{code}/round/` y `GET /api/rooms/{code}/card/` sí lo exigen y no cambian la sala. No hay ruta para salir ni para iniciar. El contrato está en `contracts/api/rooms.md`.
+`POST /api/rooms/`, `GET /api/rooms/{code}/` y `POST /api/rooms/{code}/members/` delegan en esos servicios. Crear y unirse devuelven una vez el token del miembro; la consulta de la sala no lo incluye. `POST /api/rooms/{code}/start/?token=` inicia la partida solo si ese token es el del anfitrión y responde el estado público. `GET /api/rooms/{code}/round/` y `GET /api/rooms/{code}/card/` sí exigen el token y no cambian la sala. `GET /api/rooms/{code}/score/?token=` devuelve el estado de la partida y los totales ya guardados, en el orden de alta. `winners` solo sale cuando esa partida está `finished`. La lectura no cambia el estado ni abre otra ronda. No hay ruta para salir. El contrato está en `contracts/api/rooms.md`.
 
 `start_game` solo acepta el nombre del anfitrión. Con la sala bloqueada, exige `waiting` y entre 4 y 8 miembros, crea un `Game` en `preparing` y un `Participant` por miembro, guarda esa partida en la sala y la pasa a `started`. Otra llamada del anfitrión devuelve la misma partida. No llama a `create_piles`: no hay catálogo de 15 o 16 situaciones y el reglamento no dice qué carta se omite entre 4 y 6 jugadores. Tampoco llama a `prepare_round`. Esa preparación desde la sala sigue pendiente del catálogo de situaciones. El dominio ya puede preparar la ronda cuando las pilas existen.
 
-El reglamento no reserva el resto de las acciones de juego a una sola persona. Indicar que se está listo o declarar el cierre cuando ya hay mayoría sigue siendo una regla de ronda de OOC-007, no un privilegio del anfitrión. Qué otras operaciones serían solo del anfitrión, la entrada con la partida ya iniciada y el acceso tardío siguen abiertos. Cerrar el socket no es abandonar la sala. El mismo token vuelve a entrar y recibe el estado público persistido, sin crear otro miembro ni otra partida. La reconexión durante una votación no está definida. No hay cuenta de usuario.
+El reglamento no reserva el resto de las acciones de juego a una sola persona. Indicar que se está listo o declarar el cierre cuando ya hay mayoría sigue siendo una regla de ronda de OOC-007, no un privilegio del anfitrión. Qué otras operaciones serían solo del anfitrión, la entrada con la partida ya iniciada y el acceso tardío siguen abiertos. Cerrar el socket no es abandonar la sala. El mismo token vuelve a entrar y recibe el estado público persistido, sin crear otro miembro ni otra partida. El cliente mantiene un solo socket por sesión: 3 reintentos automáticos, a 1 s, 2 s y 4 s, y al volver pide los GET ya publicados. No reenvía solo el inicio, la mano, ¡Basta! ni el voto. `unauthorized` y `room_not_found` no se reintentan. No hay cuenta de usuario.
 
 ## 9. Reglas de cartas y roles
 
@@ -481,7 +490,7 @@ Cada contrato debe especificar:
 - Efectos sobre el estado.
 - Reglas de idempotencia cuando correspondan.
 
-Las rutas de sala están en `contracts/api/rooms.md`. Crear, consultar y unirse no exigen autenticación. Salir e iniciar no se publican hasta que exista un mecanismo de identidad. No se asume otro esquema de autenticación.
+Las rutas de sala están en `contracts/api/rooms.md`. Crear, consultar y unirse no exigen autenticación. Iniciar exige el token del anfitrión. Salir no se publica. No se asume otro esquema de autenticación.
 
 ## 12. Comunicación en tiempo real
 
@@ -658,7 +667,7 @@ Cualquier cambio arquitectónico importante debe:
 1. Identificar el problema concreto que resuelve.
 2. Evaluar el impacto en cliente, backend, contratos y pruebas.
 3. Evitar dependencias duplicadas.
-4. Preservar la autoridad del servidor sobre las reglas.
+4. Preservar la autoridad del servidor sobre las reglas del online. La excepción sin conexión de la sección 21 no autoriza otra implementación de ese modo.
 5. Mantener la privacidad de las cartas y los roles.
 6. Actualizar esta documentación cuando la decisión quede confirmada.
 7. Incorporar pruebas para los comportamientos afectados.
@@ -678,4 +687,20 @@ La implementación se considera alineada con esta arquitectura cuando:
 - Las pruebas relevantes cubren reglas, permisos y transiciones.
 - La documentación refleja la implementación real.
 
-Las decisiones marcadas como pendientes deben resolverse antes de implementar funcionalidades que dependan directamente de ellas.
+Las decisiones marcadas como pendientes deben resolverse antes de implementar funcionalidades que dependan directamente de ellas. Este criterio no exige que el modo presencial de la sección 21 esté construido.
+
+## 21. Modo presencial local
+
+El camino online de las secciones 4 a 18 sigue igual. Este modo corre en el teléfono, sin backend ni socket, y no está implementado. El detalle está en `docs/ARQUITECTURA_PRESENCIAL.md`, `docs/PERSISTENCIA_PRESENCIAL.md` y `docs/NAVEGACION_PRESENCIAL.md`. La épica es OOC-015.
+
+Confirmado:
+
+- Una sola partida activa. Cerrar y volver a abrir la aplicación la reanuda. Una partida terminada no se archiva.
+- El archivo de esa partida no es `ooc.guest.session` y no guarda el token online.
+- La fase guardada elige la pantalla. Los parámetros de ruta siguen vacíos. Las pantallas que leen el token y el socket no sirven para este flujo.
+- La copia en TypeScript, todavía sin código, se limita al núcleo puro ya testeado en Django. Si un caso diverge, manda el test de Django. El online no usa esa copia.
+- En lo técnico ya alineado con el diseño: un solo archivo, una escritura que conserva el documento anterior si se corta, y confirmar en un solo reemplazo.
+
+Sigue como recomendación o propuesta, y no es regla de esta arquitectura: borrar el archivo al salir del marcador final, restaurar la carta oculta, el módulo concreto de archivo, y si abandonar, reiniciar, descartar, Inicio o el atrás borran la partida. Declarar un paquete nuevo para guardar el JSON queda fuera.
+
+La navegación asigna una pantalla a cada fase de la interfaz: nombres, carta, mesa, carga, resultado y marcador final. Un archivo inválido muestra un aviso y no entra a una fase. Si la ruta no coincide con la fase, se reemplaza sin dibujar la carta ni el voto de la ruta equivocada. El cambio de fase deja una sola ruta en el stack.

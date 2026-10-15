@@ -181,4 +181,4 @@ Con el servidor en marcha:
 - `GET http://127.0.0.1:8000/api/schema/` devuelve el contrato OpenAPI.
 - `GET http://127.0.0.1:8000/api/schema/swagger-ui/` muestra Swagger.
 
-Hoy el contrato documenta el health check y las salas: crear, consultar y unirse. Salir e iniciar no tienen ruta. No requiere autenticación. La interfaz carga sus archivos desde una CDN.
+Hoy el contrato documenta el health check y las salas: crear, consultar, unirse e iniciar. Iniciar exige el token del anfitrión. Salir no tiene ruta. Crear y unirse no exigen autenticación. La interfaz carga sus archivos desde una CDN.

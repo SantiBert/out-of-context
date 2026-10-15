@@ -29,6 +29,17 @@ class OwnCardSerializer(serializers.Serializer):
     text = serializers.CharField()
 
 
+class StandingSerializer(serializers.Serializer):
+    name = serializers.CharField()
+    points = serializers.IntegerField(min_value=0)
+
+
+class ScoreboardSerializer(serializers.Serializer):
+    status = serializers.ChoiceField(choices=("preparing", "in_progress", "finished"))
+    standings = StandingSerializer(many=True)
+    winners = serializers.ListField(child=serializers.CharField(), required=False)
+
+
 class RoundResultSerializer(serializers.Serializer):
     name = serializers.CharField()
     card = OwnCardSerializer()

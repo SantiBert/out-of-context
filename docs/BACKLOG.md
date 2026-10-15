@@ -61,14 +61,15 @@
 | OOC-006 | Implementar comunicación en tiempo real | P0 | IN_PROGRESS | OOC-005 |
 | OOC-007 | Implementar el flujo de una ronda | P0 | IN_PROGRESS | OOC-004, OOC-006 |
 | OOC-008 | Implementar votación y puntuación | P0 | IN_PROGRESS | OOC-004, OOC-007 |
-| OOC-009 | Implementar la interfaz principal en React Native | P0 | TODO | OOC-002, OOC-001 |
+| OOC-009 | Implementar la interfaz principal en React Native | P0 | IN_PROGRESS | OOC-002, OOC-001 |
 | OOC-010 | Integrar cliente y backend | P0 | TODO | OOC-005, OOC-006, OOC-009 |
 | OOC-011 | Implementar el cierre y los resultados de la partida | P1 | TODO | OOC-008, OOC-010 |
 | OOC-012 | Validar el MVP mediante pruebas integrales | P0 | TODO | OOC-010, OOC-011 |
 | OOC-013 | Preparar despliegue y distribución Android | P1 | TODO | OOC-012 |
 | OOC-014 | Mejoras posteriores al MVP | P2 | TODO | OOC-013 |
+| OOC-015 | Modo presencial de un solo dispositivo | P2 | BLOCKED | OOC-004, OOC-009.1 |
 
-**Nota:** OOC-001 figura como `IN_PROGRESS` porque las reglas se documentaron en un borrador, pero todavía deben validarse los detalles pendientes. Los estados de las demás épicas representan el punto de partida previsto y deben actualizarse según el avance real.
+**Nota:** OOC-001 figura como `IN_PROGRESS` porque las reglas se documentaron en un borrador, pero todavía deben validarse los detalles pendientes. Los estados de las demás épicas representan el punto de partida previsto y deben actualizarse según el avance real. OOC-015 está `BLOCKED`: el diseño está escrito y la implementación no empieza mientras sigan abiertas las decisiones que cambian qué se muestra o qué se borra. No depende de OOC-010 ni bloquea OOC-011. No se crea OOC-016.
 
 ---
 
@@ -529,7 +530,7 @@ La definición está en la sección 8 de `docs/ARCHITECTURE.md`. No se añadiero
 - [x] Crear, consultar y unirse usan los servicios de dominio y devuelven el estado público.
 - [x] Un nombre ausente o vacío, un código desconocido, un nombre repetido, la sala llena y una sala que no espera responden con un código de error estable.
 - [x] La respuesta no incluye claves internas, cartas, roles ni votos.
-- [x] Salir e iniciar no tienen ruta. Un nombre enviado por el cliente no demuestra la identidad, y no se añadió autenticación.
+- [x] Salir no tiene ruta. Iniciar quedó publicado en OOC-009.5 con el token del anfitrión. Un nombre enviado por el cliente no demuestra la identidad.
 
 ### OOC-005.7 — Validar el ciclo de vida de las salas
 
@@ -537,13 +538,13 @@ La definición está en la sección 8 de `docs/ARCHITECTURE.md`. No se añadiero
 **Estado:** DONE  
 **Dependencias:** OOC-005.1, OOC-005.2, OOC-005.3, OOC-005.4, OOC-005.5, OOC-005.6
 
-Una prueba recorre crear, consultar, unirse, salir e iniciar. Crear, consultar y unirse pasan por la API. Salir e iniciar usan el servicio, porque no tienen ruta. No hay WebSocket ni cliente móvil.
+Una prueba recorre crear, consultar, unirse, salir e iniciar. Crear, consultar y unirse pasan por la API. Salir sigue en el servicio, sin ruta. Iniciar tiene `POST /api/rooms/{code}/start/?token=` desde OOC-009.5.
 
 **Criterios de aceptación:**
 
 - [x] Con 3 miembros no se inicia. Con 4 y con 8 se crea una sola partida en `preparing`, y repetir el inicio no la duplica.
 - [x] El anfitrión no puede irse. Otro participante sí, y puede volver sin repetir el nombre. Después de `started` no se admite gente ni se borra a nadie.
-- [x] La consulta pública no incluye la clave de la partida, cartas, roles ni votos. Salir e iniciar por HTTP responden 404.
+- [x] La consulta pública no incluye la clave de la partida, cartas, roles ni votos. Salir por HTTP responde 404. Iniciar responde con el token del anfitrión desde OOC-009.5.
 - [x] Las incorporaciones simultáneas y los dos inicios simultáneos siguen cubiertos por las pruebas de membresía y de inicio.
 
 Queda fuera de esta épica:
@@ -923,3 +924,295 @@ Al llegar a 0 la ronda se puntúa y se revela aunque falte alguna elección. Qui
 - [x] Un voto después del cierre no se guarda. La revelación sale igual. Repetir el cierre no crea otra fila.
 - [x] Quien no votó puede elegir en la ronda siguiente.
 - [x] La revelación trae `name`, `card`, `gesture`, `targets`, `points` y `recognized_by` o `pointed_by`. No hay campo `role` ni texto de la fórmula.
+
+## OOC-009 — Implementar la interfaz principal en React Native
+
+**Prioridad:** P0  
+**Estado:** IN_PROGRESS  
+**Dependencias:** OOC-002, OOC-001  
+**Objetivo:** construir la interfaz Android sobre Expo, sin duplicar las reglas del backend.
+
+### OOC-009.1 — Estructura y navegación móvil
+
+**Prioridad:** P0  
+**Estado:** DONE  
+**Dependencias:** OOC-002.2
+
+La aplicación usa React Navigation con un stack nativo. Las rutas viven en `mobile/src/navigation/`. Las pantallas son placeholders y no llaman al backend. OOC-009.3 sustituyó la entrada única por Crear sala y Unirse.
+
+**Criterios de aceptación:**
+
+- [x] Las rutas de inicio, crear sala, unirse, lobby, carta secreta, conversación, votación, resultados y marcador están tipadas y no llevan token, carta, rol ni puntos.
+- [x] Los placeholders se recorren con el stack. Una ruta desconocida o un estado inválido vuelve a Inicio.
+- [x] La estructura deja sitio para la API, el tiempo real, el tema y los hooks. No se migró de Expo.
+- [ ] `npm run android` compiló el proyecto nativo y falló en CMake con el JDK 25 (`restricted method in java.lang.System`) en `expo-modules-core` y `react-native-screens`. El emulador llegó a arrancar, pero la app no se instaló.
+
+### OOC-009.2 — Sistema visual y componentes compartidos
+
+**Prioridad:** P0  
+**Estado:** DONE  
+**Dependencias:** OOC-009.1
+
+Los tokens viven en `src/theme/theme.ts`. Los componentes de `src/components/` se usan en los placeholders y en la pantalla Componentes. No llaman al backend.
+
+**Criterios de aceptación:**
+
+- [x] Color, tipografía, espacio, radio, tamaño táctil y elevación están centralizados. El botón, el campo, el título, la tarjeta, el estado, la carga, el error, el aviso, el vacío y la confirmación tienen props tipadas.
+- [x] Los placeholders reutilizan título, texto auxiliar y botón. El catálogo muestra carga, error y deshabilitado.
+- [x] No se añadieron dependencias. Los componentes no consultan la API ni aplican reglas de juego.
+- [ ] `npm run android` sigue sin instalar la app por el JDK 25.
+
+### OOC-009.3 — Inicio e identidad de invitado
+
+**Prioridad:** P0  
+**Estado:** DONE  
+**Dependencias:** OOC-009.2, OOC-006.5
+
+Inicio ofrece crear una sala, unirse a una y abrir el catálogo. Crear y unirse envían solo `name`. El token de la respuesta se guarda en `expo-secure-store` y en un contexto de React, fuera de la navegación. El lobby muestra el nombre. No hay login, ni salir, ni iniciar: el mecanismo de identidad de OOC-005.1 sigue abierto.
+
+**Criterios de aceptación:**
+
+- [x] El nombre se recorta, no puede quedar vacío y admite como máximo 80 caracteres. El código de unirse se recorta y se pasa a mayúsculas. El cuerpo no incluye `player_id`.
+- [x] Un cuerpo inválido, un fallo de red o `400`, `404` y `409` muestran el mensaje y permiten reintentar. El botón queda en carga mientras espera.
+- [x] El token no viaja en los parámetros de ruta ni se escribe en consola. Tras un alta válida, el lobby muestra el nombre.
+- [x] Jest cubre el recorte y el tope del nombre, el rechazo de una respuesta sin `token` y la lectura de la sesión con el almacén simulado.
+- [ ] `npm run android` sigue bloqueado por el JDK 25. Esta historia no lo vuelve a ejecutar.
+
+### OOC-009.4 — Crear y unirse a salas
+
+**Prioridad:** P0  
+**Estado:** DONE  
+**Dependencias:** OOC-009.3, OOC-006.5
+
+Crear y unirse usan `POST /api/rooms/` y `POST /api/rooms/{code}/members/`. El cuerpo es solo `name`. El lobby muestra el `code` de esa respuesta. Los errores conocidos muestran el `detail` del servidor; un código desconocido muestra un mensaje genérico. Una pulsación repetida no lanza otra solicitud hasta que la primera termina. El cliente no aplica el tope de participantes ni el estado de la sala. No hay login, ni salir, ni iniciar.
+
+**Criterios de aceptación:**
+
+- [x] Crear y unirse confirman contra el backend y solo entonces abren el lobby. El código mostrado es el `code` devuelto.
+- [x] `invalid_room`, `room_not_found`, `room_closed`, `room_full` y `duplicate_member` muestran el detalle. Un error desconocido no bloquea la pantalla y permite reintentar.
+- [x] Los controles quedan en carga durante la solicitud y una segunda pulsación no duplica el `POST`.
+- [x] Jest cubre el código devuelto, los errores conocidos y desconocidos, y dos envíos solapados.
+- [ ] `npm run android` sigue bloqueado por el JDK 25. Esta historia no lo vuelve a ejecutar.
+
+### OOC-009.5 — Lobby de la partida
+
+**Prioridad:** P0  
+**Estado:** DONE  
+**Dependencias:** OOC-009.4, OOC-006.5
+
+El lobby carga `GET /api/rooms/{code}/` y después el socket `ws://<host>/ws/rooms/<code>/?token=`. Consume `room.snapshot`, `room.player_joined`, `room.player_left`, `room.state_changed`, `game.started` y `connection.error`. Cada evento de sala sustituye la lista de participantes. Iniciar es `POST /api/rooms/{code}/start/?token=` y solo lo ve el anfitrión. No hay cartas, roles ni votos. Salir sigue sin ruta.
+
+**Criterios de aceptación:**
+
+- [x] El código, el anfitrión y los participantes salen del estado público. Un evento repetido no duplica nombres.
+- [x] La carga inicial es el GET. El snapshot vuelve a alinear la lista. La pantalla muestra conectando, en vivo, reconectando o el error.
+- [x] Iniciar se muestra solo si el nombre de la sesión es `host`. Un `200` o `game.started` abre la carta secreta. `401`, `403` y `409` dejan el lobby en su sitio.
+- [x] Jest cubre el alta repetida, la salida, la desconexión y el rechazo de inicio. El backend cubre el token del anfitrión, el `403`, el `401`, el `409` con menos de cuatro personas y la repetición.
+- [ ] `npm run android` no se ejecutó.
+
+### OOC-009.6 — Visualización de la carta secreta
+
+**Prioridad:** P0  
+**Estado:** DONE  
+**Dependencias:** OOC-009.5, OOC-007.6
+
+La carta secreta pide `GET /api/rooms/{code}/card/?token=` y `GET /api/rooms/{code}/round/?token=`. Muestra solo `number` y `text` de la carta propia, asociados al `number` de la ronda. De la ronda conserva `number` y `status`. `round.phase_changed` borra la carta si cambia el número o la fase deja de ser `conversation` o `voting`, y vuelve a pedir los dos GET. Continuar abre Conversación solo con `status` `conversation`. No hay reparto en el cliente. `begin_conversation` sigue sin ruta.
+
+**Criterios de aceptación:**
+
+- [x] La carta mostrada es la del token, con su número y su texto. Una respuesta de otra ronda no se muestra.
+- [x] La carga, el error, el reintento y la ausencia (`card_unavailable` o `round_unavailable`) dejan la pantalla en su sitio. La carta no entra en la navegación ni en la consola.
+- [x] `round.phase_changed` sustituye la fase. `round.revealed` y el resto no aportan texto de carta.
+- [x] Jest cubre la carga, el error conocido, la ausencia, el cambio de ronda y que Continuar solo vale en `conversation`.
+- [ ] `npm run android` no se ejecutó.
+
+### OOC-009.7 — Pantalla de conversación
+
+**Prioridad:** P0  
+**Estado:** DONE  
+**Dependencias:** OOC-009.6, OOC-007.6
+
+La conversación muestra la ronda y los participantes. La sala sale de `GET /api/rooms/{code}/` y las manos de `GET /api/rooms/{code}/round/?token=`: `number`, `status`, `ready` y `ready_count`. El socket es el de la sala. Envía `round.raise_hand` y `round.basta` con el payload vacío. Consume `round.hand_raised`, `round.phase_changed` y `connection.error`. Una mano repetida no duplica el nombre. «¡Basta!» se ofrece en `conversation`; el cliente no calcula `L × 2 > N`. `not_ready` deja la pantalla en su sitio. `voting` abre Votación. No hay chat, ni bajar la mano, ni cartas ni roles.
+
+**Criterios de aceptación:**
+
+- [x] Los participantes y las manos salen del estado oficial. Un `round.hand_raised` repetido no duplica nombres.
+- [x] Levantar la mano y «¡Basta!» salen por el socket, con un solo envío mientras la solicitud no termina. `not_ready` e `invalid_round` muestran el detalle y no navegan.
+- [x] `round.phase_changed` con `voting`, o un GET que ya está en `voting`, abre Votación. `round.revealed` no aporta cartas.
+- [x] Jest cubre la mano repetida, el rechazo y la transición. La pantalla muestra conectando, en vivo, reconectando o el error.
+- [ ] `npm run android` no se ejecutó.
+
+### OOC-009.8 — Interfaz de votación
+
+**Prioridad:** P0  
+**Estado:** DONE  
+**Dependencias:** OOC-009.7, OOC-008.9
+
+La votación envía `POST /api/rooms/{code}/vote/?token=` con `gesture` y `targets`. Señalar, el puño y la V son las tres formas del contrato. El jugador no recibe su rol y el cliente no decide cuál es la correcta. La marca sale de `vote_mark` o de `round.countdown`. No se resta con el reloj del teléfono. Una marca mayor que la ya recibida no reabre la cuenta. Solo el `200` confirma la papeleta. Un fallo de red la deja en duda y el reintento envía el mismo cuerpo. Al llegar a 0 no se inventa un voto. `finished` abre Resultados. `round.revealed` no guarda cartas ni gestos ajenos.
+
+**Criterios de aceptación:**
+
+- [x] Señalar exige otros participantes. El puño y la V no llevan nombres. El cuerpo no trae rol ni puntos.
+- [x] La selección local no es un voto. Un `409` no pisa la papeleta confirmada. Una caída de red no la da por perdida ni por guardada.
+- [x] La marca 0, un `status` distinto de `voting` o un `invalid_round` bloquean los controles. Una marca tardía no reabre la cuenta.
+- [x] Quien no vota no envía una papeleta. El cierre de OOC-008.9 sigue en el backend. Jest cubre los tres gestos, el rechazo, la duda y el cierre.
+- [ ] `npm run android` no se ejecutó.
+
+### OOC-009.9 — Resultados de la ronda
+
+**Prioridad:** P0  
+**Estado:** DONE  
+**Dependencias:** OOC-009.8, OOC-008.9
+
+Los resultados salen de `GET /api/rooms/{code}/results/?token=` y de `round.revealed`. Cada fila muestra `name`, `card`, `gesture`, `targets`, `points` y `recognized_by` o `pointed_by`. No hay campo `role` ni un cálculo nuevo de puntos. `results_unavailable` no muestra filas. Un evento repetido sustituye la lista y no suma. Continuar abre Marcador solo con esa lista. Una ronda `finished` no se presenta como partida terminada: la sala sigue en `started` y el cierre de la partida queda en OOC-011.
+
+**Criterios de aceptación:**
+
+- [x] La lista oficial muestra nombre, carta, gesto, señalados, puntos y una sola explicación. `gesture` null se lee como sin gesto.
+- [x] Antes de la revelación no hay filas. `results_unavailable` muestra el detalle y permite reintentar.
+- [x] El mismo `round.revealed` no duplica jugadores ni puntos. Continuar espera la lista y abre Marcador sin parámetros.
+- [x] `finished` en la ronda no marca la partida como terminada. Jest cubre la fila, la ausencia, el evento repetido y la continuación.
+- [ ] `npm run android` no se ejecutó.
+
+### OOC-009.10 — Marcador y final de partida
+
+**Prioridad:** P0  
+**Estado:** DONE  
+**Dependencias:** OOC-009.9, OOC-008.5
+
+El marcador pide `GET /api/rooms/{code}/score/?token=`. La respuesta trae `status` y `standings` (`name`, `points`) en el orden de alta. `points` es la suma ya guardada. `winners` solo llega cuando la partida está `finished`. El cliente no reordena, no suma y no elige ganadores. `round.revealed` y `round.phase_changed` con `finished` vuelven a pedir el GET. No hay otra ronda ni revancha. El cierre que pasa la partida a `finished` sigue en OOC-011.
+
+**Criterios de aceptación:**
+
+- [x] Los totales salen del GET, en el orden recibido. Una lectura repetida no suma puntos.
+- [x] `preparing` e `in_progress` se muestran como partida en curso, sin ganadores.
+- [x] `finished` muestra los `winners` del backend, incluido un empate. No hay botón de ronda nueva.
+- [x] Una fila sin `points` no se completa con cero. El backend cubre el orden, el empate, el `401` y el `404`.
+- [ ] `npm run android` no se ejecutó.
+
+### OOC-009.11 — Reconexión y errores de red
+
+**Prioridad:** P0  
+**Estado:** DONE  
+**Dependencias:** OOC-009.10, OOC-006.5
+
+Hay un solo socket por sesión. Tras un corte no fatal se reintenta 3 veces, a 1 s, 2 s y 4 s. Si un intento abre, el contador vuelve a cero. `unauthorized` y `room_not_found` no se reintentan. Al volver a vivo se piden los GET ya publicados. Una generación cerrada no pisa el estado nuevo y la fase no retrocede. El inicio, la mano, ¡Basta! y el voto no se reenvían solos.
+
+**Criterios de aceptación:**
+
+- [x] Después de reconectar, la pantalla vuelve a pedir el estado oficial. Un evento de una conexión anterior no lo reemplaza.
+- [x] Una fase atrasada y una mano con `ready_count` menor se ignoran. La cuenta no sube si la marca llega tarde.
+- [x] ¡Basta! sin confirmar queda en duda. El voto no se reenvía solo. El reintento manual del voto sigue exigiendo `voting`.
+- [x] Jest cubre el corte, el tope de 3 reintentos, la generación vieja, la fase atrasada y las acciones que no se repiten solas.
+- [ ] `npm run android` no se ejecutó.
+
+### OOC-009.12 — Pruebas del flujo móvil completo
+
+**Prioridad:** P0  
+**Estado:** DONE  
+**Dependencias:** OOC-009.11, OOC-003.1
+
+`npm test` recorre el cliente con contratos simulados, sin backend ni emulador. `__tests__/flow.test.ts` encadena identidad, sala, carta, conversación, voto, resultados, marcador y reconexión, y comprueba que no se adelantan cartas ni fases. `npm run test:integration` usa el backend de `http://127.0.0.1:8000` y queda fuera del CI. No se añadió Detox, Maestro, Playwright ni React Native Testing Library: no hay emulador en este entorno y las reglas ya están en funciones puras.
+
+**Criterios de aceptación:**
+
+- [x] El README dice cómo ejecutar Jest, la integración local, lint, tipos y formato, y qué archivo cubre cada tramo.
+- [x] El recorrido simulado no filtra cartas antes de la revelación y no cambia de fase sin un estado del servidor.
+- [x] La integración local cubre alta, lobby, inicio, ausencias, marcador en curso, `401`, `404` y un snapshot repetido.
+- [x] No hay runner nativo. El backend local no reparte, así que la integración no llega a conversación, voto ni partida `finished`.
+- [ ] `npm run android` no se ejecutó.
+
+## OOC-015 — Modo presencial de un solo dispositivo
+
+**Prioridad:** P2  
+**Estado:** BLOCKED  
+**Objetivo:** jugar en un solo teléfono, sin backend ni socket, con las reglas ya escritas.  
+**Dependencias:** OOC-004, OOC-009.1
+
+OOC-010 sigue siendo la integración del cliente con el backend. OOC-011 a OOC-014 conservan su alcance del MVP online. Esta épica no los reescribe ni los bloquea.
+
+### OOC-015.1 — Auditoría de reutilización
+
+**Prioridad:** P2  
+**Estado:** DONE  
+**Dependencias:** OOC-004, OOC-009
+
+El límite de lo reusable quedó en `docs/ARCHITECTURE.md` y en `docs/MODO_PRESENCIAL.md`. El teléfono no importa Django. No hay endpoints ni estados de sala nuevos para este modo.
+
+**Criterios de aceptación:**
+
+- [x] La arquitectura y el modo dicen qué reglas del dominio se reutilizan y qué no puede importar el teléfono.
+- [x] No se inventan endpoints ni estados de sala para este modo.
+
+### OOC-015.2 — Definición funcional
+
+**Prioridad:** P2  
+**Estado:** DONE  
+**Dependencias:** OOC-015.1
+
+`docs/MODO_PRESENCIAL.md` describe el flujo de un solo dispositivo. Las reglas compartidas y las diferencias con el online están separadas. Lo que el reglamento no define sigue pendiente. El resumen está en la sección 16 de `docs/GAME_DESIGN_DOCUMENT.md`.
+
+**Criterios de aceptación:**
+
+- [x] El documento describe el flujo de un solo dispositivo.
+- [x] Las reglas compartidas y las diferencias con el online están separadas.
+- [x] Lo que el reglamento no define sigue marcado como pendiente.
+
+### OOC-015.3 — Arquitectura
+
+**Prioridad:** P2  
+**Estado:** DONE  
+**Dependencias:** OOC-015.2
+
+`docs/ARQUITECTURA_PRESENCIAL.md` separa el camino local del online. La copia en TypeScript queda limitada al núcleo puro y todavía no tiene código. No se agrega una dependencia. La sección 21 de `docs/ARCHITECTURE.md` distingue lo confirmado de las recomendaciones.
+
+**Criterios de aceptación:**
+
+- [x] El camino local queda separado del online.
+- [x] La copia en TypeScript queda limitada al núcleo puro y sin código.
+- [x] No se agrega una dependencia.
+
+### OOC-015.4 — Persistencia
+
+**Prioridad:** P2  
+**Estado:** DONE  
+**Dependencias:** OOC-015.3
+
+`docs/PERSISTENCIA_PRESENCIAL.md` fija una sola partida activa, que se reanuda al abrir la aplicación, y la ausencia de historial. El archivo queda aparte de `ooc.guest.session`. Borrar al salir del marcador, la carta visible al reanudar, abandonar, reiniciar y descartar siguen como propuesta.
+
+**Criterios de aceptación:**
+
+- [x] Hay una sola partida activa, que se reanuda, y no hay historial.
+- [x] El archivo queda aparte de `ooc.guest.session`.
+- [x] Borrar al salir del marcador, la carta visible al reanudar, abandonar, reiniciar y descartar siguen sin promoverse a regla.
+
+### OOC-015.5 — Navegación
+
+**Prioridad:** P2  
+**Estado:** DONE  
+**Dependencias:** OOC-015.4
+
+`docs/NAVEGACION_PRESENCIAL.md` asigna una pantalla a cada fase. Una ruta que no coincide con la fase no muestra la carta ni el voto de otra. Inicio, el atrás y los rótulos siguen pendientes.
+
+**Criterios de aceptación:**
+
+- [x] Cada fase tiene una pantalla.
+- [x] Una ruta que no coincide con la fase no muestra la carta ni el voto ajenos.
+- [x] Inicio, el atrás y los rótulos siguen pendientes.
+
+### OOC-015.6 — Implementar el modo
+
+**Prioridad:** P2  
+**Estado:** BLOCKED  
+**Dependencias:** OOC-015.2, OOC-015.3, OOC-015.4, OOC-015.5, OOC-004, OOC-009.1
+
+No depende de OOC-010 y no bloquea OOC-011. No se implementa mientras sigan abiertas las decisiones que cambian qué se muestra o qué se borra: el catálogo de 15 o 16 situaciones, la carta al reanudar, volver a mostrar una carta oculta, la cubierta de la carga, Inicio y el atrás, el diálogo de reiniciar y de salir del marcador, el momento de borrar el archivo, comprobar `L × 2 > N`, señalar a tres o más, el orden del marcador, quién confirma, los rótulos, el socket de invitado durante la partida local y cómo llegar al online sin abandonar.
+
+**Criterios de aceptación:**
+
+- [ ] La partida corre en un teléfono, sin HTTP ni socket.
+- [ ] Las pantallas siguen la fase guardada y no muestran la carta de otro jugador antes de la revelación.
+- [ ] La persistencia se limita a lo confirmado en OOC-015.4.
+- [ ] Los tests de paridad coinciden con los casos de Django. Si divergen, manda Django.
+- [ ] No se agrega una dependencia.
+- [ ] El online y OOC-011 a OOC-014 quedan intactos.

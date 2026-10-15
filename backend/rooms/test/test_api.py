@@ -134,16 +134,15 @@ class RoomApiTests(TestCase):
         self.assertEqual(response.json()["code"], "room_closed")
         self.assertEqual(room.members.count(), 1)
 
-    def test_leave_and_start_are_not_published(self):
+    def test_leave_is_not_published(self):
         room = create_room("Ana")
 
-        for path in (
+        response = self.client.post(
             f"/api/rooms/{room.code}/leave/",
-            f"/api/rooms/{room.code}/start/",
-        ):
-            with self.subTest(path=path):
-                response = self.client.post(path, {"name": "Ana"}, format="json")
-                self.assertEqual(response.status_code, 404)
+            {"name": "Ana"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 404)
         room.refresh_from_db()
         self.assertEqual(room.status, Room.Status.WAITING)
         self.assertIsNone(room.game_id)
@@ -156,5 +155,6 @@ class RoomApiTests(TestCase):
         self.assertIn("/api/rooms/", schema)
         self.assertIn("/api/rooms/{code}/", schema)
         self.assertIn("/api/rooms/{code}/members/", schema)
+        self.assertIn("/api/rooms/{code}/start/", schema)
+        self.assertIn("/api/rooms/{code}/score/", schema)
         self.assertNotIn("/leave", schema)
-        self.assertNotIn("/start", schema)

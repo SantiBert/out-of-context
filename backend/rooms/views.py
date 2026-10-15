@@ -13,6 +13,7 @@ from rooms.serializers import (
     RoomStateSerializer,
     RoundPublicSerializer,
     RoundResultSerializer,
+    ScoreboardSerializer,
     VoteChoiceSerializer,
 )
 from rooms.service import (
@@ -23,8 +24,11 @@ from rooms.service import (
     create_room,
     get_room_state,
     join_room,
+    member_for_token,
     own_card,
     round_state,
+    scoreboard,
+    start_game,
     stored_results,
 )
 
@@ -34,6 +38,8 @@ ERROR_STATUS = {
     "room_full": 409,
     "duplicate_member": 409,
     "unauthorized": 401,
+    "not_host": 403,
+    "invalid_player_count": 409,
     "round_unavailable": 404,
     "card_unavailable": 404,
     "results_unavailable": 409,
@@ -127,6 +133,42 @@ class JoinRoomView(APIView):
         return Response(access_state(state, member.access_token), status=201)
 
 
+class StartRoomView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        request=None,
+        responses={
+            200: RoomStateSerializer,
+            401: RoomErrorSerializer,
+            403: RoomErrorSerializer,
+            404: RoomErrorSerializer,
+            409: RoomErrorSerializer,
+        },
+    )
+    def post(self, request, code):
+        token = _request_token(request)
+        denied = _authorize(code, token)
+        if denied is not None:
+            return denied
+        member = member_for_token(code, token)
+        if member is None:
+            return Response(
+                {
+                    "code": "unauthorized",
+                    "detail": "La conexión no está autorizada.",
+                },
+                status=401,
+            )
+        try:
+            start_game(code, member.name)
+            state = get_room_state(code)
+        except (InvalidRoom, RoomError) as error:
+            return room_error_response(error)
+        return Response(public_state(state))
+
+
 class RoundStateView(APIView):
     authentication_classes = []
     permission_classes = [AllowAny]
@@ -172,6 +214,30 @@ class RoundResultsView(APIView):
         except RoomError as error:
             return room_error_response(error)
         serializer = RoundResultSerializer(data=results, many=True)
+        serializer.is_valid(raise_exception=True)
+        return Response(serializer.data)
+
+
+class ScoreboardView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        responses={
+            200: ScoreboardSerializer,
+            401: RoomErrorSerializer,
+            404: RoomErrorSerializer,
+        },
+    )
+    def get(self, request, code):
+        denied = _authorize(code, _request_token(request))
+        if denied is not None:
+            return denied
+        try:
+            board = scoreboard(code, _request_token(request))
+        except RoomError as error:
+            return room_error_response(error)
+        serializer = ScoreboardSerializer(data=board)
         serializer.is_valid(raise_exception=True)
         return Response(serializer.data)
 

@@ -79,9 +79,12 @@ class RoomLifecycleTests(TestCase):
         self.assertEqual(returned.status_code, 201)
         self.assertEqual(returned.json()["participants"].count("Otto"), 1)
 
-        for path in (f"/api/rooms/{code}/leave/", f"/api/rooms/{code}/start/"):
-            response = self.client.post(path, {"name": "Ana"}, format="json")
-            self.assertEqual(response.status_code, 404)
+        response = self.client.post(
+            f"/api/rooms/{code}/leave/",
+            {"name": "Ana"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 404)
         room = Room.objects.get(code=code)
         self.assertEqual(room.status, Room.Status.WAITING)
         self.assertIsNone(room.game_id)

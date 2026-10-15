@@ -1,6 +1,6 @@
 # Salas
 
-No hay autenticación de usuario. Un nombre en el cuerpo registra a quien entra en la sala; no demuestra que quien llama sea un participante ya existente. Crear y unirse devuelven, una sola vez, un `token` de ese miembro. Consultar la sala no lo incluye. Salir e iniciar una partida no tienen ruta.
+No hay autenticación de usuario. Un nombre en el cuerpo registra a quien entra en la sala; no demuestra que quien llama sea un participante ya existente. Crear y unirse devuelven, una sola vez, un `token` de ese miembro. Consultar la sala no lo incluye. Salir no tiene ruta. Iniciar exige el token del anfitrión.
 
 La respuesta pública tiene `code`, `status`, `host`, `participants`, `player_count`, `accepting_members` y `can_start`. No incluye la clave interna, el token, la partida, cartas, roles ni votos.
 
@@ -39,9 +39,20 @@ Un error tiene `code` y `detail`.
 - Efecto: añade un miembro. No reparte cartas.
 - Idempotencia: repetir el mismo nombre responde `409` y no añade otro miembro.
 
+## Iniciar la partida
+
+- Método y ruta: `POST /api/rooms/{code}/start/?token=`
+- Autenticación: el `token` emitido al crear o al unirse. Un nombre o un id de jugador no lo sustituyen.
+- Permisos: el miembro de ese token tiene que ser el anfitrión.
+- Cuerpo: ninguno.
+- Respuesta `200`: el estado público. La sala pasa a `started`. No incluye token, cartas, roles ni votos.
+- Errores: `401` `unauthorized`, `403` `not_host`, `404` `room_not_found`, `409` `room_closed`, `409` `invalid_player_count`.
+- Efecto: `start_game` crea la partida. `room_full` no sale de esta ruta.
+- Idempotencia: repetir el inicio, siendo el anfitrión, devuelve el mismo estado y no crea otra partida.
+
 ## Bloqueadas
 
-`POST /api/rooms/{code}/leave/` y `POST /api/rooms/{code}/start/` no existen. Abandonar la sala e iniciar la partida siguen en el dominio. El token no abre esas rutas; solo abre el socket de la sala.
+`POST /api/rooms/{code}/leave/` no existe. Abandonar la sala sigue en el dominio. El socket no acepta un comando de inicio: el cliente inicia con el `POST`.
 
 ## Consultar la ronda
 
@@ -102,3 +113,14 @@ La respuesta `200` repite ese cuerpo, con `targets` ordenado por nombre. Un camp
 - Errores: `401` `unauthorized`; `404` `room_not_found` o `round_unavailable`; `409` `results_unavailable` mientras no haya revelación guardada. Ese cuerpo es solo `code` y `detail`.
 - Efecto: ninguno. No lee la papeleta para calcular, no llama a `apply_round_scores` y no publica.
 - Idempotencia: repetir la lectura devuelve el mismo resultado guardado.
+
+## Consultar el marcador
+
+- Método y ruta: `GET /api/rooms/{code}/score/?token=`
+- Autenticación: el mismo `token`.
+- Permisos: un miembro de esa sala, con la partida ya creada.
+- Cuerpo: ninguno.
+- Respuesta `200`: `status` de la partida (`preparing`, `in_progress` o `finished`) y `standings`. Cada entrada trae `name` y `points`, en el orden de alta. `points` es la suma ya guardada de los premios. No incluye cartas, gestos, roles ni votos. `winners` solo aparece cuando `status` es `finished`: los nombres de esa lista cuyo total es el máximo, en el mismo orden. Un empate los incluye a todos.
+- Errores: `401` `unauthorized`; `404` `room_not_found` o `round_unavailable` si la sala no tiene partida.
+- Efecto: ninguno. No cambia el estado, no abre otra ronda y no elige un ganador distinto del total guardado.
+- Idempotencia: repetir la lectura devuelve el mismo marcador.
