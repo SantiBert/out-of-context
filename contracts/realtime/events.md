@@ -60,7 +60,27 @@ Los tipos de sala y `connection.error` los emite solo el servidor. El payload de
 - Dirección: servidor al cliente.
 - Propósito: mostrar la cuenta 3, 2, 1, 0 mientras la recepción sigue abierta.
 - Payload: `code`, `number`, `mark`, `opened_at` y `closes_at`. No incluye gesto, objetivo, carta, rol ni puntos.
-- Cuándo se emite: al pasar a `voting` sale el 3. Cada número dura un segundo y el 0 coincide con `closes_at`, tres segundos después de `opened_at`. Una marca ya emitida no se repite. Repetir «¡Basta!» o reconectar no reinicia el plazo. El cliente no puede declarar la cuenta: ese mensaje es `server_only`. El cierre autorizado es `closes_at`, aunque el evento llegue después.
+- Cuándo se emite: al pasar a `voting` sale el 3. Cada número dura un segundo y el 0 coincide con `closes_at`, tres segundos después de `opened_at`. Una marca ya emitida no se repite. Repetir «¡Basta!» o reconectar no reinicia el plazo. El cliente no puede declarar la cuenta, la revelación ni una puntuación: esos mensajes son `server_only`. El cierre autorizado es `closes_at`, aunque el evento llegue después.
+
+```json
+{
+  "type": "round.countdown",
+  "payload": {
+    "code": "AB12CD",
+    "number": 1,
+    "mark": 3,
+    "opened_at": "2026-10-14T03:00:00+00:00",
+    "closes_at": "2026-10-14T03:00:03+00:00"
+  }
+}
+```
+
+## round.revealed
+
+- Dirección: servidor al cliente.
+- Propósito: mostrar las cartas, los gestos y los puntos cuando la votación ya cerró.
+- Payload: `code`, `number` y `results`. Cada entrada, ordenada por nombre, trae `name`, `card` (`number` y `text`), `gesture`, `targets`, `points` y una sola explicación: `recognized_by` si pertenece a un equipo, o `pointed_by` si es impostor. No incluye token, clave del modelo ni id de participante.
+- Cuándo se emite: después de que `close_vote` confirma los premios y deja la ronda en `finished`, en el mismo envío que la marca 0 y que `round.phase_changed`. `round.phase_changed` sigue sin cartas. Repetir el cierre no emite otra vez. El cliente no puede declarar la revelación: ese mensaje es `server_only`. Si falta una elección, la marca 0 sale igual y esa persona aparece con `gesture` null, `targets` vacío y `points` 0.
 
 ## connection.error
 
@@ -72,11 +92,11 @@ Los tipos de sala y `connection.error` los emite solo el servidor. El payload de
 
 ## Comandos del cliente
 
-Solo hay dos. El `payload` va vacío. La identidad es el `token` de la conexión, no un campo del mensaje.
+Solo hay dos. El `payload` va vacío. La identidad es el `token` de la conexión, no un campo del mensaje. La elección no es un comando: se envía con `POST /api/rooms/{code}/vote/?token=`.
 
 - `round.raise_hand`: pide `raise_hand`. Si es la primera vez, la sala recibe `round.hand_raised`.
 - `round.basta`: pide `call_basta`. Si el servidor calcula mayoría, la sala recibe `round.phase_changed` con `voting`.
 
-Un `round.hand_raised`, `round.phase_changed` o `round.countdown` entrante es `server_only` y no cambia la ronda. Estos comandos no envían la carta. Si el socket no vio la cuenta, `GET /api/rooms/{code}/round/` devuelve `vote_opened_at`, `vote_closes_at` y la marca del reloj del servidor. `GET /api/rooms/{code}/card/` sigue siendo solo la carta propia.
+Un `round.hand_raised`, `round.phase_changed`, `round.countdown` o `round.revealed` entrante es `server_only` y no cambia la ronda. Estos comandos no envían la carta. Si el socket no vio la cuenta, `GET /api/rooms/{code}/round/` devuelve `vote_opened_at`, `vote_closes_at` y la marca del reloj del servidor. Ese `GET` incluye `results` solo cuando la ronda está `finished`. `GET /api/rooms/{code}/card/` sigue siendo solo la carta propia.
 
-Estos eventos no llevan gestos de voto ni puntuación. La conversación no tiene chat.
+La cuenta y el cambio de fase no llevan gestos ni puntos. `round.revealed` sí. La conversación no tiene chat.

@@ -9,6 +9,7 @@ SERVER_EVENT_TYPES = (
     "round.phase_changed",
     "round.hand_raised",
     "round.countdown",
+    "round.revealed",
     "connection.error",
 )
 
@@ -43,6 +44,10 @@ class ServerOnly(ProtocolError):
 
 
 class _StrictSerializer(serializers.Serializer):
+    def to_internal_value(self, data):
+        self.initial_data = data
+        return super().to_internal_value(data)
+
     def validate(self, attrs):
         unknown = set(self.initial_data) - set(self.fields)
         if unknown:
@@ -113,6 +118,34 @@ class RoundCountdownPayloadSerializer(_StrictSerializer):
     closes_at = serializers.CharField()
 
 
+class _CardSerializer(_StrictSerializer):
+    number = serializers.IntegerField()
+    text = serializers.CharField()
+
+
+class RoundResultSerializer(_StrictSerializer):
+    name = serializers.CharField()
+    card = _CardSerializer()
+    gesture = serializers.CharField(allow_null=True)
+    targets = serializers.ListField(child=serializers.CharField())
+    points = serializers.IntegerField(min_value=0)
+    recognized_by = serializers.ListField(child=serializers.CharField(), required=False)
+    pointed_by = serializers.ListField(child=serializers.CharField(), required=False)
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        explained = "recognized_by" in attrs, "pointed_by" in attrs
+        if explained == (True, True) or explained == (False, False):
+            raise serializers.ValidationError("El resultado no explica los puntos.")
+        return attrs
+
+
+class RoundRevealedPayloadSerializer(_StrictSerializer):
+    code = serializers.CharField()
+    number = serializers.IntegerField(min_value=1)
+    results = RoundResultSerializer(many=True)
+
+
 class RoundHandPayloadSerializer(_StrictSerializer):
     code = serializers.CharField()
     number = serializers.IntegerField(min_value=1)
@@ -165,6 +198,8 @@ def _payload_serializer(event_type, payload):
         return RoundHandPayloadSerializer(data=payload)
     if event_type == "round.countdown":
         return RoundCountdownPayloadSerializer(data=payload)
+    if event_type == "round.revealed":
+        return RoundRevealedPayloadSerializer(data=payload)
     if event_type in ("room.player_joined", "room.player_left"):
         return MembershipEventPayloadSerializer(
             data=payload,

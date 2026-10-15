@@ -196,9 +196,18 @@ class InvalidVoteTests(SimpleTestCase):
         with self.assertRaises(InvalidVote):
             score_votes(team_of("A", "B"), votes)
 
-    def test_a_missing_vote_is_rejected(self):
-        with self.assertRaises(InvalidVote):
-            score_votes(team_of("A", "B"), [VoteChoice("A", POINT, ("B",))])
+    def test_a_missing_vote_scores_zero_and_keeps_the_others(self):
+        classification = team_of("A", "B", "C")
+        votes = [
+            VoteChoice("A", POINT, ("B", "C")),
+            VoteChoice("B", POINT, ("A", "C")),
+        ]
+
+        scores = dict(score_votes(classification, votes))
+
+        self.assertEqual(scores["A"], 1)
+        self.assertEqual(scores["B"], 1)
+        self.assertEqual(scores["C"], 0)
 
     def test_repeated_targets_are_rejected(self):
         votes = [
@@ -284,6 +293,32 @@ def voting_round(assignments):
     return round_, players
 
 
+def later_voting_round(game, players, number, assignments):
+    round_ = Round.objects.create(
+        game=game,
+        number=number,
+        status=Round.Status.VOTING,
+    )
+    copies = {}
+    for name, card_number in assignments:
+        if card_number not in copies:
+            card = SituationCard.objects.create(
+                number=card_number,
+                text=f"Situación {card_number}.",
+            )
+            copies[card_number] = [
+                CardCopy.objects.create(card=card, copy_number=index)
+                for index in (1, 2, 3)
+            ]
+            RoundPile.objects.create(game=game, round=round_, card=card)
+        DealtHand.objects.create(
+            round=round_,
+            participant=players[name],
+            card_copy=copies[card_number].pop(0),
+        )
+    return round_
+
+
 class PersistScoreTests(TestCase):
     def test_applying_a_round_twice_does_not_duplicate_points(self):
         round_, players = voting_round(
@@ -317,6 +352,75 @@ class PersistScoreTests(TestCase):
         self.assertEqual(dict(first)[players["Luis"].pk], 0)
         self.assertEqual(dict(first)[players["Nora"].pk], 2)
         self.assertEqual(dict(first)[players["Otto"].pk], 1)
+
+    def test_a_later_round_keeps_the_previous_awards(self):
+        first_round, players = voting_round(
+            [("Ana", 1), ("Luis", 1), ("Nora", 2), ("Otto", 3)]
+        )
+        record_votes(
+            first_round,
+            [
+                VoteChoice(players["Ana"], POINT, (players["Luis"],)),
+                VoteChoice(players["Luis"], POINT, (players["Ana"], players["Nora"])),
+                VoteChoice(players["Nora"], V),
+                VoteChoice(players["Otto"], FIST),
+            ],
+        )
+        apply_round_scores(first_round)
+        previous = list(
+            ScoreAward.objects.filter(round=first_round)
+            .order_by("participant_id")
+            .values_list("participant_id", "points")
+        )
+
+        second_round = later_voting_round(
+            first_round.game,
+            players,
+            2,
+            [("Ana", 10), ("Luis", 10), ("Nora", 10), ("Otto", 11)],
+        )
+        record_votes(
+            second_round,
+            [
+                VoteChoice(
+                    players["Ana"],
+                    POINT,
+                    (players["Luis"], players["Nora"]),
+                ),
+                VoteChoice(players["Luis"], POINT, (players["Ana"],)),
+                VoteChoice(
+                    players["Nora"],
+                    POINT,
+                    (players["Ana"], players["Luis"]),
+                ),
+                VoteChoice(players["Otto"], V),
+            ],
+        )
+
+        apply_round_scores(second_round)
+
+        self.assertEqual(
+            list(
+                ScoreAward.objects.filter(round=first_round)
+                .order_by("participant_id")
+                .values_list("participant_id", "points")
+            ),
+            previous,
+        )
+        self.assertEqual(total_points(players["Ana"]), 3)
+        self.assertEqual(total_points(players["Luis"]), 0)
+        self.assertEqual(total_points(players["Nora"]), 3)
+        self.assertEqual(total_points(players["Otto"]), 1)
+
+        apply_round_scores(first_round)
+        apply_round_scores(second_round)
+
+        self.assertEqual(total_points(players["Ana"]), 3)
+        self.assertEqual(total_points(players["Luis"]), 0)
+        self.assertEqual(total_points(players["Nora"]), 3)
+        self.assertEqual(total_points(players["Otto"]), 1)
+        self.assertEqual(ScoreAward.objects.filter(round=first_round).count(), 4)
+        self.assertEqual(ScoreAward.objects.filter(round=second_round).count(), 4)
 
     def test_recording_the_same_votes_twice_does_not_add_rows(self):
         round_, players = voting_round([("Ana", 1), ("Luis", 1), ("Nora", 2)])

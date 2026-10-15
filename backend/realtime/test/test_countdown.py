@@ -76,7 +76,21 @@ class CountdownTests(TransactionTestCase):
             closed.pk,
             opened + CLOSE_AFTER,
         )
-        self.assertEqual([event[1]["mark"] for event in closed_marks], [1, 0])
+        self.assertEqual(
+            [event[0] for event in closed_marks],
+            [
+                "round.countdown",
+                "round.countdown",
+                "round.phase_changed",
+                "round.revealed",
+            ],
+        )
+        self.assertEqual([event[1]["mark"] for event in closed_marks[:2]], [1, 0])
+        self.assertEqual(closed_marks[2][1]["status"], "finished")
+        for row in closed_marks[3][1]["results"]:
+            self.assertIsNone(row["gesture"])
+            self.assertEqual(row["targets"], [])
+            self.assertEqual(row["points"], 0)
         again = await database_sync_to_async(publish_due)(
             room.code,
             closed.pk,
@@ -95,7 +109,8 @@ class CountdownTests(TransactionTestCase):
         self.assertEqual(parse_datetime(public["vote_opened_at"]), opened)
         self.assertEqual(stored.vote_opened_at, opened)
         self.assertEqual(public["vote_mark"], countdown_mark(stored))
-        self.assertNotIn(card.text, json.dumps(public))
+        self.assertEqual(public["status"], "finished")
+        self.assertEqual(len(public["results"]), 4)
 
     async def _open(self, code, token):
         communicator = WebsocketCommunicator(application, f"/ws/rooms/{code}/")

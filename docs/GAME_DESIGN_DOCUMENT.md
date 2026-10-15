@@ -189,6 +189,8 @@ El procedimiento del juego físico es el siguiente:
 3. Nadie puede abstenerse de votar.
 4. Los jugadores mantienen sus gestos mientras revelan sus cartas.
 
+En la partida digital, si al llegar a 0 alguien no envió su elección, la votación se cierra igual. Esa persona suma 0 puntos, no recibe un gesto y puede jugar las rondas siguientes. Las elecciones ya enviadas se puntúan con las reglas de la sección 10. Después del cierre no se aceptan votos nuevos.
+
 Los gestos representan decisiones diferentes según el rol que cada jugador cree tener.
 
 ### 9.1. Votación de los miembros de un equipo
@@ -347,7 +349,7 @@ Este documento recoge las reglas que se han podido reconstruir a partir del regl
 
 1. **Distribución de cartas:** confirmar que la selección de pilas y el reparto aleatorio pueden representarse digitalmente sin cambiar las probabilidades del juego físico.
 2. **Interfaz de conversación:** definir cómo se representa la conversación en partidas presenciales y remotas. La interfaz no debe revelar información secreta.
-3. **Votación digital:** definir cómo se registran las decisiones y se revelan simultáneamente en partidas remotas.
+3. **Votación digital:** resuelta. La elección se registra con `POST /api/rooms/{code}/vote/?token=`. Al llegar a 0 el servidor revela a la vez `round.revealed`. Cada jugador trae `name`, `card` (`number` y `text`), `gesture`, `targets`, `points` y `recognized_by` o `pointed_by`. No hay un campo de rol ni un texto de la fórmula. Quien no eligió suma 0, con `gesture` null y `targets` vacío, y sigue en las rondas siguientes.
 4. **Condición de puntuación del equipo:** resuelta. Un compañero cuenta si su señalamiento incluye al jugador, aunque la identificación de ese compañero esté incompleta o incluya a alguien ajeno. Vale para equipos de dos y de tres.
 5. **Estrategias del impostor:** verificar cualquier detalle adicional del reglamento original que no esté incluido en el texto disponible.
 

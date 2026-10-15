@@ -60,6 +60,20 @@ class ServerEventTests(SimpleTestCase):
                 "opened_at": "2026-10-14T03:00:00+00:00",
                 "closes_at": "2026-10-14T03:00:03+00:00",
             },
+            "round.revealed": {
+                "code": "AB12CD",
+                "number": 1,
+                "results": [
+                    {
+                        "name": "Ana",
+                        "card": {"number": 1, "text": "Situación 1."},
+                        "gesture": "point",
+                        "targets": ["Luis"],
+                        "points": 1,
+                        "recognized_by": ["Luis"],
+                    }
+                ],
+            },
             "connection.error": {
                 "code": "invalid_message",
                 "detail": "El payload no es válido.",
@@ -117,6 +131,7 @@ class ServerEventTests(SimpleTestCase):
             "closes_at": "2026-10-14T03:00:03+00:00",
             "gesture": "fist",
             "card": "Una carta secreta",
+            "points": 4,
         }
         with self.assertRaises(InvalidMessage):
             encode_server_event("round.countdown", payload)
@@ -152,6 +167,39 @@ class ClientMessageTests(SimpleTestCase):
                         "status": "voting",
                         "dealt_count": 4,
                         "discard_count": 5,
+                    },
+                }
+            )
+        self.assertEqual(raised.exception.code, "server_only")
+
+    def test_a_revealed_payload_rejects_secret_fields(self):
+        payload = {
+            "code": "AB12CD",
+            "number": 1,
+            "results": [
+                {
+                    "name": "Ana",
+                    "card": {"number": 1, "text": "Situación 1."},
+                    "gesture": "point",
+                    "targets": ["Luis"],
+                    "points": 1,
+                    "recognized_by": ["Luis"],
+                    "pk": 4,
+                }
+            ],
+        }
+        with self.assertRaises(InvalidMessage):
+            encode_server_event("round.revealed", payload)
+
+    def test_a_client_cannot_declare_the_reveal(self):
+        with self.assertRaises(ServerOnly) as raised:
+            decode_client_message(
+                {
+                    "type": "round.revealed",
+                    "payload": {
+                        "code": "AB12CD",
+                        "number": 1,
+                        "results": [],
                     },
                 }
             )

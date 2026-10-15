@@ -49,7 +49,7 @@ Un error tiene `code` y `detail`.
 - Autenticación: el `token` emitido al crear o al unirse. Un nombre o un id de jugador no lo sustituyen.
 - Permisos: un miembro de esa sala.
 - Cuerpo: ninguno.
-- Respuesta `200`: `number`, `status`, `participant_ids`, `dealt_count`, `discard_count`, `ready_count` y `ready`. `ready` son los nombres con la mano levantada. No incluye cartas, descartes, roles ni el token.
+- Respuesta `200`: `number`, `status`, `participant_ids`, `dealt_count`, `discard_count`, `ready_count`, `ready`, `vote_opened_at`, `vote_closes_at` y `vote_mark`. `ready` son los nombres con la mano levantada. En `voting` no incluye cartas, gestos ni puntos. En `finished` añade `results`: `name`, `card`, `gesture`, `targets`, `points` y `recognized_by` o `pointed_by`. Quien no eligió trae `gesture` null y `targets` vacío.
 - Errores: `401` `unauthorized`, `404` `room_not_found`, `404` `round_unavailable`.
 - Efecto: ninguno. Sirve para recuperar el estado público después de reconectar.
 - Idempotencia: la lectura no cambia la ronda.
@@ -66,3 +66,39 @@ Un error tiene `code` y `detail`.
 - Idempotencia: la lectura no reparte.
 
 `GET /api/rooms/{code}/` sigue sin token y sin carta. Levantar la mano y «¡Basta!» no tienen ruta: van por el socket.
+
+## Registrar una elección
+
+- Método y ruta: `POST /api/rooms/{code}/vote/?token=`
+- Autenticación: el mismo `token`. Un nombre, un id de jugador o el token de otra sala no lo sustituyen.
+- Permisos: un miembro de esa sala, con la ronda en `voting` y `vote_closes_at` todavía en el futuro.
+- Cuerpo: `{"gesture": "point", "targets": ["<nombre>", ...]}` o `{"gesture": "fist", "targets": []}` o `{"gesture": "v", "targets": []}`. `point` nombra al menos a otro participante de esa partida. `fist` y `v` no nombran a nadie. No hay `role` ni `player_id`.
+- Respuesta `200`: `gesture` y `targets`, solo para quien llama. `targets` vuelve ordenado por nombre.
+- Errores: `400` `invalid_vote` si el cuerpo no tiene esa forma; `401` `unauthorized`; `404` `room_not_found` o `round_unavailable`; `409` `invalid_round` si la fase o el plazo no admiten la elección; `409` `invalid_vote` si el objetivo no sirve o esa persona ya eligió otra cosa.
+- Efecto: guarda una fila `Vote` de ese miembro. No publica un evento, no muestra la elección en el `GET` de la ronda ni en el de la sala, y no calcula puntos.
+- Idempotencia: repetir la misma elección devuelve la misma. Una distinta responde `409` y no la cambia.
+
+Ejemplo de señalar:
+
+```json
+{"gesture": "point", "targets": ["Luis"]}
+```
+
+Ejemplo de puño:
+
+```json
+{"gesture": "fist", "targets": []}
+```
+
+La respuesta `200` repite ese cuerpo, con `targets` ordenado por nombre. Un campo `points`, `role` o `player_id` responde `400` `invalid_vote`.
+
+## Consultar resultados
+
+- Método y ruta: `GET /api/rooms/{code}/results/?token=`
+- Autenticación: el mismo `token`.
+- Permisos: un miembro de esa sala.
+- Cuerpo: ninguno.
+- Respuesta `200`: la lista ya revelada. Cada entrada trae `name`, `card`, `gesture`, `targets`, `points` y `recognized_by` o `pointed_by`. Solo cuando la ronda está `finished` y los premios ya están guardados. Quien no eligió trae `gesture` null, `targets` vacío y `points` 0.
+- Errores: `401` `unauthorized`; `404` `room_not_found` o `round_unavailable`; `409` `results_unavailable` mientras no haya revelación guardada. Ese cuerpo es solo `code` y `detail`.
+- Efecto: ninguno. No lee la papeleta para calcular, no llama a `apply_round_scores` y no publica.
+- Idempotencia: repetir la lectura devuelve el mismo resultado guardado.

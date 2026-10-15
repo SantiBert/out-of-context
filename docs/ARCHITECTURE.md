@@ -346,9 +346,9 @@ En `preparing` no se admite un noveno participante. `in_progress` y `finished` e
 | `prepared` | Las pilas de la ronda ya se eligieron y todavía no se repartieron. |
 | `conversation` | Cada participante tiene una carta. |
 | `voting` | `call_basta` deja la ronda aquí, todavía sin votos. Los gestos no salen por el socket. |
-| `finished` | Estado persistido, sin servicio que lo alcance. |
+| `finished` | `close_vote` la deja aquí después de guardar los premios. |
 
-`start_round` bloquea la partida y elige los montones que todavía no se usaron: 3 si hay 4–6 jugadores y 4 si hay 7–8. Deja la ronda en `prepared`, sin pasar la partida a `in_progress` y sin repartir. `deal_round` continúa desde esa ronda. La vista pública de la ronda no incluye la carta. No crea otra si la partida está `finished`, si ya se alcanzó el máximo, si no quedan montones o si alguna ronda sigue abierta. Abierta es `prepared`, `conversation` o `voting`. `finished` es la única resuelta. Un error no abre la ronda siguiente. Aplicar la puntuación no cambia el estado y no hay servicio que pase la ronda a `finished`.
+`start_round` bloquea la partida y elige los montones que todavía no se usaron: 3 si hay 4–6 jugadores y 4 si hay 7–8. Deja la ronda en `prepared`, sin pasar la partida a `in_progress` y sin repartir. `deal_round` continúa desde esa ronda. La vista pública de la ronda no incluye la carta. No crea otra si la partida está `finished`, si ya se alcanzó el máximo, si no quedan montones o si alguna ronda sigue abierta. Abierta es `prepared`, `conversation` o `voting`. `finished` es la única resuelta. Un error no abre la ronda siguiente. `apply_round_scores` no cambia el estado. `close_vote` lo pasa a `finished` solo después de guardar los premios, y no abre la ronda siguiente ni termina la partida.
 
 `deal_round` bloquea la ronda, exige `prepared` y la pasa a `conversation`. Un segundo reparto, o dos a la vez, no añade manos ni descartes. `begin_conversation(code, token)` llama a ese reparto cuando la ronda abierta está en `prepared`. No acepta un estado. Si ya está en `conversation`, devuelve la misma ronda y no emite. En `voting`, con la partida `finished` o sin ronda preparada, no cambia nada. Solo el paso real publica `round.phase_changed` después de confirmar: `code`, `number`, `status`, `dealt_count` y `discard_count`. El cliente no puede declarar esa fase. `round_state(code, token)` devuelve la vista pública de la ronda abierta. `own_card(code, token)` sigue devolviendo `number` y `text` solo al miembro de ese token. Sin token válido no hay estado ni carta. `GET /api/rooms/{code}/round/?token=` y `GET /api/rooms/{code}/card/?token=` son esas lecturas. No hay chat.
 
@@ -412,25 +412,29 @@ El servidor debe calcular esta condición utilizando las cartas realmente repart
 
 Quien cree que pertenece a un equipo elige `point` y los participantes que señala. No puede señalarse ni repetir un objetivo. Señalar a alguien ajeno es una elección válida. Quien cree que es impostor elige `fist` (puño, jugar seguro) o `v` (V, arriesgar), sin objetivos.
 
-La papeleta tiene que estar completa. Falta un jugador, hay dos elecciones del mismo jugador o el gesto no admite ese objetivo: `InvalidVote`. La misma papeleta no duplica filas. Una distinta se rechaza. `apply_round_scores` aplica `score_votes` y no cambia el estado de la ronda. El cierre de la conversación no puntúa.
+`record_votes` exige la papeleta completa. Falta un jugador, hay dos elecciones del mismo jugador o el gesto no admite ese objetivo: `InvalidVote`. La misma papeleta no duplica filas. Una distinta se rechaza. `score_votes`, al cerrar, recorre a todos los jugadores: quien no tiene elección suma 0 y no señala. `apply_round_scores` aplica esa cuenta y no cambia el estado de la ronda. El cierre de la conversación no puntúa.
 
 Al pasar a `voting`, el servidor guarda `vote_opened_at` y `vote_closes_at`, tres segundos después. Cada número dura un segundo: 3, 2, 1 y 0. `round.countdown` publica `code`, `number`, `mark`, `opened_at` y `closes_at`. No lleva gesto, objetivo, carta ni puntos. Repetir «¡Basta!» o reconectar no reescribe el plazo. El `GET` de la ronda devuelve esas fechas y la marca que corresponde al reloj del servidor.
 
 El cierre es `vote_closes_at`. Una papeleta con el reloj del servidor en ese instante o después se rechaza y no crea filas. Un evento puede llegar más tarde por el temporizador del proceso o por la red; esa demora no mueve el plazo. Durante `manage.py test` no se arma el temporizador: la prueba adelanta el reloj con `publish_due`.
 
+`POST /api/rooms/{code}/vote/?token=` registra la elección de ese miembro: `point` con nombres de la partida, o `fist` y `v` sin nombres. No acepta un rol ni un id de jugador. El rol real sigue saliendo de las cartas repartidas; un compañero puede cerrar el puño y un impostor puede señalar. Repetir la misma elección no crea otra fila. Una distinta se rechaza. La respuesta vuelve solo a quien llama. El `GET` de la ronda, el de la sala y `round.countdown` no incluyen el gesto ni los objetivos. Esta llamada no puntúa.
+
 Mientras la ronda está en `voting` y todavía no hubo revelación, siguen ocultos la carta ajena, el rol, el gesto, los objetivos y los puntos. La carta propia sigue saliendo solo por `own_card`. `round_public_view` y el `GET` de la sala no incluyen esos campos.
 
-Después del 0, el reglamento muestra los gestos junto con las cartas y entonces se leen los puntos. Esta historia no publica esa revelación.
+Al publicar la marca 0, `close_vote` aplica los premios y deja la ronda en `finished`, aunque falte alguna elección. Quien no votó no tiene fila `Vote`: en la revelación `gesture` es null, `targets` está vacío y `points` es 0. Puede jugar la ronda siguiente. Entonces salen `round.phase_changed`, sin cartas, y `round.revealed`. Cada entrada trae `name`, `card` (`number` y `text`), `gesture`, `targets`, `points` y `recognized_by` o `pointed_by`. Los puntos son el `ScoreAward`. La explicación de un equipo sale de `evaluate_team_choice`. Repetir el cierre devuelve el mismo resultado y no emite otra vez. El `GET` de la ronda incluye `results` solo en `finished`. En `voting` no lleva carta ajena, gesto ni puntos. El `GET` de la sala tampoco. `own_card` no cambia.
 
-El reglamento prohíbe abstenerse y no dice qué ocurre si alguien no envía la elección al llegar a 0. No se asigna un gesto por defecto ni se puntúa una papeleta incompleta. La revelación simultánea en una partida remota sigue abierta en el GDD.
+Un `POST` con la ronda ya `finished` responde `404` `round_unavailable`. Con el plazo vencido y el cierre todavía no ejecutado, responde `409` `invalid_round`. En ambos casos no se crea ni se cambia un voto.
 
 La evaluación y el cálculo de puntos se ejecutan en el servidor. El cliente no envía la puntuación oficial.
 
 ### Equipos
 
-Un jugador de equipo obtiene puntos únicamente si señala a todos sus compañeros y no señala a jugadores ajenos. Cuando cumple la condición, recibe un punto por cada compañero que también lo señaló correctamente.
+Un jugador de equipo obtiene puntos únicamente si señala a todos sus compañeros y no señala a jugadores ajenos. Cuando cumple la condición, recibe un punto por cada compañero cuyo `point` lo incluye, aunque la lista de ese compañero esté incompleta o tenga un ajeno.
 
 Si no cumple la condición, obtiene cero puntos.
+
+`evaluate_team_choice` compara una elección con el equipo que sale de las cartas. Es correcta solo cuando `point` nombra exactamente a los otros miembros. `recognized_by` son los compañeros cuyo `point` incluye a ese jugador, aunque su lista esté incompleta o tenga ajenos. El puño, la V y el señalamiento de un impostor no entran. No escribe votos, no publica y no calcula puntos. Un impostor no tiene equipo en esa función.
 
 ### Impostor
 
@@ -439,6 +443,8 @@ El gesto seguro otorga un punto si el jugador realmente es impostor.
 El gesto arriesgado otorga un punto base más un punto por cada jugador que lo señaló creyendo que era compañero, siempre que el jugador sea realmente impostor y haya recibido al menos un señalamiento de ese tipo.
 
 Si nadie lo señala de esa manera, obtiene cero. Un jugador que no es impostor obtiene cero con cualquiera de esos gestos.
+
+El total de la partida es la suma de los `ScoreAward` de ese participante. Puntuar la misma ronda otra vez devuelve esos puntos y no los suma de nuevo. Una ronda posterior conserva los premios de la anterior. Si crear un premio falla, la ronda no pasa a `finished`.
 
 ### Consistencia
 

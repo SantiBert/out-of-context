@@ -795,7 +795,7 @@ Queda fuera de esta historia el encadenamiento automático de la siguiente ronda
 - [x] `point` señala participantes. `fist` y `v` no señalan a nadie. Una papeleta incompleta o repetida no se guarda.
 - [x] Fuera de `voting` no se crean votos. La misma papeleta no duplica. Puntuar no cambia el estado.
 - [x] Durante `voting`, la vista pública no incluye carta ajena, rol, gesto, objetivo ni puntos.
-- [ ] Siguen abiertos qué ocurre si alguien no elige al llegar a 0 y la revelación simultánea. La cuenta dura un segundo por número y cierra a los tres; quedó en OOC-008.2.
+- [x] El voto ausente al llegar a 0 y la revelación simultánea quedaron cerrados en OOC-008.9. La cuenta dura un segundo por número y cierra a los tres; quedó en OOC-008.2.
 
 ### OOC-008.2 — Implementar el ciclo de vida y la cuenta regresiva de votación
 
@@ -811,4 +811,115 @@ Al pasar a `voting` se guardan `vote_opened_at` y `vote_closes_at`. La cuenta pu
 - [x] Se publican las marcas 3, 2, 1 y 0 una sola vez, sin gesto, carta ni puntos.
 - [x] Una papeleta en `vote_closes_at` o después no se guarda. El cliente no puede declarar la cuenta.
 - [x] Cerrar el socket y volver a consultar deja el mismo `vote_opened_at` y la marca del reloj del servidor.
-- [ ] Siguen abiertos el voto ausente al llegar a 0 y la revelación simultánea. `manage.py test` no arma el temporizador.
+- [x] El voto ausente al llegar a 0 y la revelación simultánea quedaron cerrados en OOC-008.9. `manage.py test` no arma el temporizador.
+
+### OOC-008.3 — Registrar las elecciones de los participantes
+
+**Prioridad:** P0  
+**Estado:** DONE  
+**Dependencias:** OOC-008.1, OOC-008.2
+
+`POST /api/rooms/{code}/vote/?token=` guarda una elección en `Vote` mientras el plazo sigue abierto. La identidad es el token. No hay rol en el cuerpo, ni evento de sala, ni puntuación.
+
+**Criterios de aceptación:**
+
+- [x] `point` nombra participantes de esa partida. `fist` y `v` no nombran a nadie. Un token ajeno, un id o la fase incorrecta no crean filas.
+- [x] La misma elección se puede repetir. Una distinta no reemplaza la guardada. Dos envíos a la vez dejan un voto.
+- [x] El `GET` de la ronda y el de la sala no incluyen el gesto ni los objetivos. No se crean puntos.
+- [x] El voto ausente al llegar a 0 y la revelación simultánea quedaron cerrados en OOC-008.9.
+
+### OOC-008.4 — Evaluar elecciones de los jugadores normales
+
+**Prioridad:** P0  
+**Estado:** DONE  
+**Dependencias:** OOC-004, OOC-008.3
+
+`evaluate_team_choice` compara la elección con el equipo real. No cambia los votos ni calcula la puntuación.
+
+**Criterios de aceptación:**
+
+- [x] El equipo sale de las cartas. Una elección es correcta si `point` nombra exactamente a los compañeros.
+- [x] `recognized_by` incluye a un compañero que señaló al jugador, aunque su lista esté incompleta o tenga ajenos.
+- [x] Pareja, trío, varios impostores, otro equipo, lista parcial y puño quedan cubiertos. Evaluar no cambia `Vote` ni crea puntos.
+- [ ] Siguen fuera la puntuación del impostor y la revelación. Un impostor no se evalúa como equipo.
+
+### OOC-008.5 — Calcular y persistir puntuaciones
+
+**Prioridad:** P0  
+**Estado:** DONE  
+**Dependencias:** OOC-004.4, OOC-008.4
+
+`score_votes` ya aplica la fórmula del reglamento. `apply_round_scores` guarda un `ScoreAward` por jugador y ronda. `total_points` suma esos premios. El cierre de la conversación no llama a esa operación. Al llegar a 0, si la papeleta está completa, lo hace `close_vote`.
+
+**Criterios de aceptación:**
+
+- [x] Un jugador de equipo suma un punto por cada compañero que lo señaló, solo si su `point` nombra exactamente a esos compañeros.
+- [x] Un impostor con puño suma 1. Con V suma 1 más cada señalamiento si recibió al menos uno, y 0 si no recibió ninguno. Si señala, suma 0.
+- [x] Un compañero que cierra el puño o hace la V sigue siendo una elección válida y suma 0. El contrato de OOC-008.3 rechaza el gesto mal formado.
+- [x] Puntuar otra vez no duplica filas. Una ronda posterior conserva los premios anteriores y el total es la suma de las dos.
+- [x] El voto ausente al llegar a 0 quedó cerrado en OOC-008.9. La revelación quedó en OOC-008.6.
+
+### OOC-008.6 — Cerrar la votación y revelar resultados
+
+**Prioridad:** P0  
+**Estado:** DONE  
+**Dependencias:** OOC-006, OOC-008.4, OOC-008.5
+
+Al publicar la marca 0, `close_vote` puntúa y deja la ronda en `finished`. Publica `round.revealed`. No hay comando del cliente ni ronda nueva.
+
+**Criterios de aceptación:**
+
+- [x] Solo cierra una votación cuyo plazo ya venció. Los puntos salen de `apply_round_scores`.
+- [x] La ronda pasa a `finished` después de guardar los premios. Si el premio falla, sigue en `voting`.
+- [x] `round.revealed` trae carta, gesto, objetivos y puntos, sin token ni id. Repetirlo no emite ni suma de nuevo.
+- [x] Antes del cierre, el `GET` de la ronda y la cuenta no llevan carta ajena, gesto ni puntos.
+- [x] Si falta una elección al llegar a 0, esa persona suma 0 sin gesto y la ronda se revela. Quedó cerrado en OOC-008.9.
+
+### OOC-008.7 — Integrar votación y puntuación con REST y WebSockets
+
+**Prioridad:** P0  
+**Estado:** DONE  
+**Dependencias:** OOC-008.3, OOC-008.6
+
+`POST /api/rooms/{code}/vote/?token=` sigue guardando la elección. `GET /api/rooms/{code}/results/?token=` devuelve la revelación ya guardada. Mientras no hay premios, responde `409` `results_unavailable` y no puntúa.
+
+**Criterios de aceptación:**
+
+- [x] La elección y la cuenta pública siguen en el `POST` y en `round.countdown`. Un `points` en el cuerpo responde `400`.
+- [x] `GET /api/rooms/{code}/results/?token=` responde `409` `results_unavailable` durante `voting`. Un token ajeno responde `401`.
+- [x] Cuando los premios ya existen, esa lectura devuelve el resultado guardado y no crea filas nuevas.
+- [x] El cliente no declara la cuenta, la revelación ni una puntuación.
+- [x] El voto ausente al llegar a 0 quedó cerrado en OOC-008.9.
+
+### OOC-008.8 — Pruebas de integración de votación y puntuación
+
+**Prioridad:** P0  
+**Estado:** DONE  
+**Dependencias:** OOC-008.7
+
+`realtime/test/test_vote_cycle.py` recorre el cierre que ya existe. No cambia la fórmula. El voto ausente quedó cerrado en OOC-008.9.
+
+**Criterios de aceptación:**
+
+- [x] Una partida pasa por la conversación, las manos y «¡Basta!». El socket recibe la marca 3. Cada jugador elige por `POST /api/rooms/{code}/vote/?token=` según las cartas: un trío se señala y el impostor cierra el puño.
+- [x] Antes del plazo, el `GET` de la ronda, el de resultados y `round.countdown` no traen gesto, carta ajena ni puntos. Resultados responde `409` `results_unavailable`. Un token ajeno responde `401`.
+- [x] `publish_due` en el plazo publica la marca 0, `round.phase_changed` con `finished` y un solo `round.revealed`. Esos puntos coinciden con `ScoreAward` y con `total_points`. Repetir el `POST`, el cierre y el `GET` no crea otra fila ni otro evento. Reconectar recibe el snapshot y el `GET` de la ronda sigue igual.
+- [x] Otra partida cubre la pareja y la V: sin señalamientos, con uno y con varios. Una identificación incompleta o con un ajeno suma 0.
+- [x] Si falta una elección, sale la marca 0 y `round.revealed`. Quien no eligió suma 0, con `gesture` null y sin fila de voto. Un `POST` con la ronda ya cerrada no agrega votos. Si crear el premio falla, la ronda no pasa a `finished` y no se publica la revelación.
+- [x] Quien no eligió puede jugar la ronda siguiente. Quedó cerrado en OOC-008.9.
+
+### OOC-008.9 — Cerrar el voto ausente y confirmar la revelación
+
+**Prioridad:** P0  
+**Estado:** DONE  
+**Dependencias:** OOC-008.8
+
+Al llegar a 0 la ronda se puntúa y se revela aunque falte alguna elección. Quien no votó suma 0, con `gesture` null y `targets` vacío, y puede jugar la ronda siguiente. El payload de `round.revealed` queda como contrato del MVP.
+
+**Criterios de aceptación:**
+
+- [x] Una papeleta completa sigue revelando una sola vez y no duplica premios.
+- [x] Si falta una elección, o faltan varias, esas personas suman 0 y no tienen fila `Vote`. Los demás se puntúan con la fórmula ya cerrada.
+- [x] Un voto después del cierre no se guarda. La revelación sale igual. Repetir el cierre no crea otra fila.
+- [x] Quien no votó puede elegir en la ronda siguiente.
+- [x] La revelación trae `name`, `card`, `gesture`, `targets`, `points` y `recognized_by` o `pointed_by`. No hay campo `role` ni texto de la fórmula.

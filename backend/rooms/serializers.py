@@ -24,6 +24,21 @@ class RoomErrorSerializer(serializers.Serializer):
     detail = serializers.CharField()
 
 
+class OwnCardSerializer(serializers.Serializer):
+    number = serializers.IntegerField()
+    text = serializers.CharField()
+
+
+class RoundResultSerializer(serializers.Serializer):
+    name = serializers.CharField()
+    card = OwnCardSerializer()
+    gesture = serializers.CharField(allow_null=True)
+    targets = serializers.ListField(child=serializers.CharField())
+    points = serializers.IntegerField(min_value=0)
+    recognized_by = serializers.ListField(child=serializers.CharField(), required=False)
+    pointed_by = serializers.ListField(child=serializers.CharField(), required=False)
+
+
 class RoundPublicSerializer(serializers.Serializer):
     number = serializers.IntegerField()
     status = serializers.CharField()
@@ -35,8 +50,23 @@ class RoundPublicSerializer(serializers.Serializer):
     vote_opened_at = serializers.DateTimeField(allow_null=True)
     vote_closes_at = serializers.DateTimeField(allow_null=True)
     vote_mark = serializers.IntegerField(allow_null=True, min_value=0, max_value=3)
+    results = RoundResultSerializer(many=True, required=False)
 
 
-class OwnCardSerializer(serializers.Serializer):
-    number = serializers.IntegerField()
-    text = serializers.CharField()
+class VoteChoiceSerializer(serializers.Serializer):
+    gesture = serializers.ChoiceField(choices=("point", "fist", "v"))
+    targets = serializers.ListField(child=serializers.CharField(), allow_empty=True)
+
+    def validate(self, attrs):
+        unknown = set(self.initial_data) - {"gesture", "targets"}
+        if unknown:
+            raise serializers.ValidationError("El mensaje incluye campos no públicos.")
+        gesture = attrs["gesture"]
+        targets = attrs["targets"]
+        if gesture == "point" and not targets:
+            raise serializers.ValidationError(
+                "El gesto de señalar exige al menos un jugador."
+            )
+        if gesture in ("fist", "v") and targets:
+            raise serializers.ValidationError("El puño y la V no señalan jugadores.")
+        return attrs

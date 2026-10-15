@@ -18,6 +18,12 @@ from games.deck import (
 )
 from games.models import DealtHand, Game, Participant, Round
 from games.rounds import declare_conversation_end, mark_ready
+from games.scoring import (
+    InvalidVote,
+    close_vote,
+    reveal_results,
+    submit_vote,
+)
 from games.voting import countdown_mark, due_marks
 from rooms.models import (
     MAX_ROOM_MEMBERS,
@@ -81,6 +87,10 @@ class CardUnavailable(RoomError):
 
 class RoundUnavailable(RoomError):
     code = "round_unavailable"
+
+
+class ResultsUnavailable(RoomError):
+    code = "results_unavailable"
 
 
 def create_room(name):
@@ -160,9 +170,28 @@ def call_basta(code, token):
     return closed
 
 
+def cast_vote(code, token, gesture, targets):
+    member, participant, round_ = _round_actor(code, token)
+    if not isinstance(targets, list) or any(
+        not isinstance(name, str) for name in targets
+    ):
+        raise InvalidVote("El objetivo no pertenece a la ronda.")
+    names = {player.name: player.pk for player in member.room.game.participants.all()}
+    resolved = []
+    for name in targets:
+        if name not in names:
+            raise InvalidVote("El objetivo no pertenece a la ronda.")
+        resolved.append(names[name])
+    choice = submit_vote(round_, participant, gesture, resolved)
+    return {
+        "gesture": choice.gesture,
+        "targets": sorted(name for name, pk in names.items() if pk in choice.targets),
+    }
+
+
 def round_state(code, token):
     member = _member_of_game(code, token)
-    round_ = _open_round(member.room.game)
+    round_ = _visible_round(member.room.game)
     if round_ is None:
         raise RoundUnavailable("No hay una ronda en curso.")
     view = round_public_view(round_)
@@ -176,7 +205,19 @@ def round_state(code, token):
             flat=True,
         )
     )
+    if round_.status == Round.Status.FINISHED and round_.score_awards.exists():
+        view["results"] = reveal_results(round_)
     return view
+
+
+def stored_results(code, token):
+    member = _member_of_game(code, token)
+    round_ = _visible_round(member.room.game)
+    if round_ is None:
+        raise RoundUnavailable("No hay una ronda en curso.")
+    if not round_.score_awards.exists():
+        raise ResultsUnavailable("Los resultados todavía no están disponibles.")
+    return reveal_results(round_)
 
 
 def _round_actor(code, token):
@@ -197,6 +238,13 @@ def _member_of_game(code, token):
 
 def _open_round(game):
     return game.rounds.exclude(status=Round.Status.FINISHED).order_by("-number").first()
+
+
+def _visible_round(game):
+    opened = _open_round(game)
+    if opened is not None:
+        return opened
+    return game.rounds.filter(status=Round.Status.FINISHED).order_by("-number").first()
 
 
 def own_card(code, token):
@@ -430,11 +478,36 @@ def claim_due(code, round_id, now=None):
 
 def publish_due(code, round_id, now=None):
     events = claim_due(code, round_id, now)
+    closing = any(
+        kind == "round.countdown" and payload["mark"] == 0 for kind, payload in events
+    )
+    if closing:
+        events.extend(_reveal_due(code, round_id, now))
     if events:
         from realtime.publish import publish_room_events
 
         publish_room_events(code, events)
     return events
+
+
+def _reveal_due(code, round_id, now):
+    round_ = Round.objects.filter(pk=round_id).first()
+    if round_ is None:
+        return []
+    try:
+        closed = close_vote(round_, now)
+    except InvalidRoundState:
+        return []
+    if not closed.changed:
+        return []
+    round_.refresh_from_db()
+    return [
+        ("round.phase_changed", _phase_payload(code, round_)),
+        (
+            "round.revealed",
+            {"code": code, "number": round_.number, "results": closed.results},
+        ),
+    ]
 
 
 def arm_countdown(code, round_id):

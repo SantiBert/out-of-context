@@ -3,6 +3,8 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from games.deck import InvalidRoundState
+from games.scoring import InvalidVote
 from rooms.serializers import (
     NameSerializer,
     OwnCardSerializer,
@@ -10,16 +12,20 @@ from rooms.serializers import (
     RoomErrorSerializer,
     RoomStateSerializer,
     RoundPublicSerializer,
+    RoundResultSerializer,
+    VoteChoiceSerializer,
 )
 from rooms.service import (
     InvalidRoom,
     RoomError,
+    cast_vote,
     connection_access,
     create_room,
     get_room_state,
     join_room,
     own_card,
     round_state,
+    stored_results,
 )
 
 ERROR_STATUS = {
@@ -30,6 +36,7 @@ ERROR_STATUS = {
     "unauthorized": 401,
     "round_unavailable": 404,
     "card_unavailable": 404,
+    "results_unavailable": 409,
 }
 
 
@@ -142,6 +149,75 @@ class RoundStateView(APIView):
         serializer = RoundPublicSerializer(data=view)
         serializer.is_valid(raise_exception=True)
         return Response(serializer.data)
+
+
+class RoundResultsView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        responses={
+            200: RoundResultSerializer(many=True),
+            401: RoomErrorSerializer,
+            404: RoomErrorSerializer,
+            409: RoomErrorSerializer,
+        },
+    )
+    def get(self, request, code):
+        denied = _authorize(code, _request_token(request))
+        if denied is not None:
+            return denied
+        try:
+            results = stored_results(code, _request_token(request))
+        except RoomError as error:
+            return room_error_response(error)
+        serializer = RoundResultSerializer(data=results, many=True)
+        serializer.is_valid(raise_exception=True)
+        return Response(serializer.data)
+
+
+class CastVoteView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        request=VoteChoiceSerializer,
+        responses={
+            200: VoteChoiceSerializer,
+            400: RoomErrorSerializer,
+            401: RoomErrorSerializer,
+            404: RoomErrorSerializer,
+            409: RoomErrorSerializer,
+        },
+    )
+    def post(self, request, code):
+        token = _request_token(request)
+        denied = _authorize(code, token)
+        if denied is not None:
+            return denied
+        serializer = VoteChoiceSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(
+                {"code": "invalid_vote", "detail": "La elección no es válida."},
+                status=400,
+            )
+        try:
+            choice = cast_vote(
+                code,
+                token,
+                serializer.validated_data["gesture"],
+                serializer.validated_data["targets"],
+            )
+        except InvalidRoundState as error:
+            return Response(
+                {"code": "invalid_round", "detail": str(error)},
+                status=409,
+            )
+        except InvalidVote as error:
+            return Response({"code": "invalid_vote", "detail": str(error)}, status=409)
+        except RoomError as error:
+            return room_error_response(error)
+        return Response(choice)
 
 
 class OwnCardView(APIView):

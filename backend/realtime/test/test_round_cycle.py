@@ -134,9 +134,11 @@ class RoundCycleTests(TransactionTestCase):
     async def _failures(self):
         code, members = await self._table(NAMES[:4], 1)
         await self._exhaust(code)
-        missing = await self._response(f"/api/rooms/{code}/round/", members["Ana"])
-        self.assertEqual(missing.status_code, 404)
-        self.assertEqual(missing.json()["code"], "round_unavailable")
+        finished = await self._response(f"/api/rooms/{code}/round/", members["Ana"])
+        self.assertEqual(finished.status_code, 200)
+        self.assertEqual(finished.json()["status"], "finished")
+        self.assertNotIn("results", finished.json())
+        self.assertNotIn("gesture", finished.json())
         self.assertEqual((await self._facts(code))["rounds"], 1)
 
         bare = await self._create("Ana")
