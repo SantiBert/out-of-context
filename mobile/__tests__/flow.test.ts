@@ -196,6 +196,11 @@ describe('flujo de la partida', () => {
       Results: undefined,
       Scoreboard: undefined,
       Catalog: undefined,
+      LocalSetup: undefined,
+      LocalCard: undefined,
+      LocalTable: undefined,
+      LocalRecord: undefined,
+      LocalResults: undefined,
     };
     expect(session?.token).toBe('token-ana');
     expect(Object.values(routes).every((value) => value === undefined)).toBe(

@@ -2,10 +2,12 @@ import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
 
 import { theme } from '../theme/theme';
 
+type ButtonVariant = 'primary' | 'secondary' | 'destructive';
+
 type ButtonProps = {
   label: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary';
+  variant?: ButtonVariant;
   disabled?: boolean;
   loading?: boolean;
   accessibilityLabel?: string;
@@ -30,30 +32,41 @@ export function Button({
       onPress={onPress}
       style={[
         styles.base,
-        variant === 'primary' ? styles.primary : styles.secondary,
+        surfaceStyle(variant),
         inactive ? styles.inactive : null,
       ]}
     >
       {loading ? (
-        <ActivityIndicator
-          color={
-            variant === 'primary'
-              ? theme.colors.onPrimary
-              : theme.colors.primary
-          }
-        />
+        <ActivityIndicator color={indicatorColor(variant)} />
       ) : (
-        <Text
-          style={[
-            styles.label,
-            variant === 'primary' ? styles.primaryLabel : styles.secondaryLabel,
-          ]}
-        >
-          {label}
-        </Text>
+        <Text style={[styles.label, labelStyle(variant)]}>{label}</Text>
       )}
     </Pressable>
   );
+}
+
+function surfaceStyle(variant: ButtonVariant) {
+  if (variant === 'destructive') {
+    return styles.destructive;
+  }
+  if (variant === 'secondary') {
+    return styles.secondary;
+  }
+  return styles.primary;
+}
+
+function labelStyle(variant: ButtonVariant) {
+  if (variant === 'secondary') {
+    return styles.secondaryLabel;
+  }
+  return styles.primaryLabel;
+}
+
+function indicatorColor(variant: ButtonVariant) {
+  if (variant === 'secondary') {
+    return theme.colors.primary;
+  }
+  return theme.colors.onPrimary;
 }
 
 const styles = StyleSheet.create({
@@ -73,6 +86,10 @@ const styles = StyleSheet.create({
   secondary: {
     backgroundColor: theme.colors.background,
     borderColor: theme.colors.primary,
+  },
+  destructive: {
+    backgroundColor: theme.colors.danger,
+    borderColor: theme.colors.danger,
   },
   inactive: {
     opacity: 0.5,

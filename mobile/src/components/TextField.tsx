@@ -1,4 +1,10 @@
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+  type TextInputProps,
+} from 'react-native';
 
 import { theme } from '../theme/theme';
 
@@ -9,6 +15,11 @@ type TextFieldProps = {
   error?: string;
   disabled?: boolean;
   placeholder?: string;
+  autoCapitalize?: TextInputProps['autoCapitalize'];
+  autoCorrect?: boolean;
+  returnKeyType?: TextInputProps['returnKeyType'];
+  blurOnSubmit?: boolean;
+  onSubmitEditing?: () => void;
 };
 
 export function TextField({
@@ -18,6 +29,11 @@ export function TextField({
   error,
   disabled = false,
   placeholder,
+  autoCapitalize,
+  autoCorrect,
+  returnKeyType,
+  blurOnSubmit,
+  onSubmitEditing,
 }: TextFieldProps) {
   return (
     <View style={styles.wrap}>
@@ -30,6 +46,11 @@ export function TextField({
         onChangeText={onChangeText}
         placeholder={placeholder}
         placeholderTextColor={theme.colors.muted}
+        autoCapitalize={autoCapitalize}
+        autoCorrect={autoCorrect}
+        returnKeyType={returnKeyType}
+        blurOnSubmit={blurOnSubmit}
+        onSubmitEditing={onSubmitEditing}
         style={[
           styles.input,
           error ? styles.inputError : null,

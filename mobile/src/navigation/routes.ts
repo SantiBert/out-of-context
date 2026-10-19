@@ -9,6 +9,11 @@ export const appRoutes = [
   'Results',
   'Scoreboard',
   'Catalog',
+  'LocalSetup',
+  'LocalCard',
+  'LocalTable',
+  'LocalRecord',
+  'LocalResults',
 ] as const;
 
 export type AppRoute = (typeof appRoutes)[number];
@@ -24,6 +29,11 @@ export type RootStackParamList = {
   Results: undefined;
   Scoreboard: undefined;
   Catalog: undefined;
+  LocalSetup: undefined;
+  LocalCard: undefined;
+  LocalTable: undefined;
+  LocalRecord: undefined;
+  LocalResults: undefined;
 };
 
 export const homeRoute: AppRoute = 'Home';

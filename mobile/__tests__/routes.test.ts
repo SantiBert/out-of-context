@@ -19,6 +19,11 @@ describe('rutas de la aplicación', () => {
       'Results',
       'Scoreboard',
       'Catalog',
+      'LocalSetup',
+      'LocalCard',
+      'LocalTable',
+      'LocalRecord',
+      'LocalResults',
     ]);
   });
 
@@ -27,6 +32,15 @@ describe('rutas de la aplicación', () => {
     expect(isAppRoute('Score')).toBe(false);
     expect(shouldResetToHome({ routes: [{ name: 'Score' }] })).toBe(true);
     expect(shouldResetToHome({ routes: [{ name: 'Lobby' }] })).toBe(false);
+    expect(shouldResetToHome({ routes: [{ name: 'LocalSetup' }] })).toBe(false);
+    expect(shouldResetToHome({ routes: [{ name: 'LocalCard' }] })).toBe(false);
+    expect(shouldResetToHome({ routes: [{ name: 'LocalTable' }] })).toBe(false);
+    expect(shouldResetToHome({ routes: [{ name: 'LocalRecord' }] })).toBe(
+      false,
+    );
+    expect(shouldResetToHome({ routes: [{ name: 'LocalResults' }] })).toBe(
+      false,
+    );
     expect(shouldResetToHome({ routes: [] })).toBe(true);
   });
 });

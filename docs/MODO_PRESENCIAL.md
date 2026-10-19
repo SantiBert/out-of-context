@@ -50,6 +50,7 @@ Mientras se mira una carta, el dispositivo no muestra otra. Después de ocultarl
 
 ## Pendiente de confirmación
 
+- El reglamento y OOC-010 no dicen si dos jugadores pueden llamarse igual, ni si un cambio de mayúsculas es el mismo nombre. No se unen las mayúsculas. El mismo texto ya recortado no entra, como quedó escrito en las validaciones de este modo.
 - El reglamento no dice el orden en que se pasa el teléfono, si se puede volver a ver la propia carta después de ocultarla, ni qué pasa si se intenta conversar antes de que todos la hayan ocultado.
 - La sección 15 deja abierta la interfaz de la conversación presencial. Este modo no obliga a registrar manos ni «¡Basta!» en la aplicación. Falta confirmar si el dispositivo debe comprobar `L × 2 > N` o si le basta con que la mesa ya haya cerrado.
 - La partida digital perdona a quien no votó. El juego físico no permite abstenerse. Falta confirmar qué hace el dispositivo si, al confirmar, falta el gesto de alguien.
@@ -57,7 +58,7 @@ Mientras se mira una carta, el dispositivo no muestra otra. Después de ocultarl
 - Falta confirmar quién pulsa confirmar, si la confirmación de todas las elecciones es indivisible y qué se muestra si falla a la mitad. Después de confirmada, el dominio no sustituye una elección por otra distinta.
 - Falta confirmar si, durante la carga, el dispositivo muestra las cartas ya reveladas en la mesa o solo los nombres y los gestos.
 - El GDD no fija el orden de la lista del marcador. Sí fija que el ganador es quien tiene más puntos y que el empate es victoria compartida. Falta confirmar el orden visual de los nombres.
-- `backend/cards.json` tiene 36 textos y ningún módulo lo carga. El reglamento pide 15 o 16 situaciones y no enumera cuáles. Falta el catálogo que alimenta `create_piles`. La sección 15.1 sigue pendiente: el azar digital no debe cambiar las probabilidades del juego físico.
+- `backend/cards.json` es el mazo de 36 situaciones. `load_cards` las guarda en `SituationCard` con tres copias. La partida presencial sortea 15 o 16 de ese archivo, sin el servidor. `start_game` sigue sin llamar a `create_piles`. La sección 15.1 sigue pendiente si el mazo físico no es este archivo.
 - No está definido si esta partida sigue viviendo en el servidor, con sala y token, o en el dispositivo. La arquitectura no admite una segunda copia de las reglas en TypeScript. Tampoco hay una ruta para salir ni una sesión con varios nombres en un teléfono.
 - No está definido sacar o renombrar jugadores después del reparto. En el online, la sala iniciada no acepta incorporaciones.
 - Bajar la mano no está definido. Este modo no lo agrega.

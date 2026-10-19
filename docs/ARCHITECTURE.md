@@ -693,12 +693,15 @@ Las decisiones marcadas como pendientes deben resolverse antes de implementar fu
 
 El camino online de las secciones 4 a 18 sigue igual. Este modo corre en el teléfono, sin backend ni socket, y no está implementado. El detalle está en `docs/ARQUITECTURA_PRESENCIAL.md`, `docs/PERSISTENCIA_PRESENCIAL.md` y `docs/NAVEGACION_PRESENCIAL.md`. La épica es OOC-015.
 
+El núcleo local del cliente no llama a `fetch` ni abre un socket. Sin una sesión de invitado guardada, abrir el presencial no requiere red. Si esa sesión ya está en el teléfono, el cascarón online abre un socket aunque la persona esté en el presencial. Conectarlo solo en las rutas online queda como alternativa y no se aplica aquí. La recuperación de la partida después de cerrar la aplicación no está probada en un dispositivo sin red: el puerto activo es memoria del proceso.
+
 Confirmado:
 
 - Una sola partida activa. Cerrar y volver a abrir la aplicación la reanuda. Una partida terminada no se archiva.
 - El archivo de esa partida no es `ooc.guest.session` y no guarda el token online.
 - La fase guardada elige la pantalla. Los parámetros de ruta siguen vacíos. Las pantallas que leen el token y el socket no sirven para este flujo.
 - La copia en TypeScript, todavía sin código, se limita al núcleo puro ya testeado en Django. Si un caso diverge, manda el test de Django. El online no usa esa copia.
+- OOC-010 no define un modo de partida. `Game` y `Room` no tienen ese campo, y el documento local tampoco.
 - En lo técnico ya alineado con el diseño: un solo archivo, una escritura que conserva el documento anterior si se corta, y confirmar en un solo reemplazo.
 
 Sigue como recomendación o propuesta, y no es regla de esta arquitectura: borrar el archivo al salir del marcador final, restaurar la carta oculta, el módulo concreto de archivo, y si abandonar, reiniciar, descartar, Inicio o el atrás borran la partida. Declarar un paquete nuevo para guardar el JSON queda fuera.

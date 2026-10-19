@@ -68,8 +68,10 @@
 | OOC-013 | Preparar despliegue y distribución Android | P1 | TODO | OOC-012 |
 | OOC-014 | Mejoras posteriores al MVP | P2 | TODO | OOC-013 |
 | OOC-015 | Modo presencial de un solo dispositivo | P2 | BLOCKED | OOC-004, OOC-009.1 |
+| OOC-019 | Pulido de UX del modo presencial | P2 | IN_PROGRESS | OOC-015 |
+| OOC-020 | Rediseño UI/UX e identidad visual | P2 | IN_PROGRESS | OOC-009, OOC-019 |
 
-**Nota:** OOC-001 figura como `IN_PROGRESS` porque las reglas se documentaron en un borrador, pero todavía deben validarse los detalles pendientes. Los estados de las demás épicas representan el punto de partida previsto y deben actualizarse según el avance real. OOC-015 está `BLOCKED`: el diseño está escrito y la implementación no empieza mientras sigan abiertas las decisiones que cambian qué se muestra o qué se borra. No depende de OOC-010 ni bloquea OOC-011. No se crea OOC-016.
+**Nota:** OOC-001 figura como `IN_PROGRESS` porque las reglas se documentaron en un borrador, pero todavía deben validarse los detalles pendientes. Los estados de las demás épicas representan el punto de partida previsto y deben actualizarse según el avance real. OOC-015 está `BLOCKED`: el diseño está escrito y la implementación no empieza mientras sigan abiertas las decisiones que cambian qué se muestra o qué se borra. No depende de OOC-010 ni bloquea OOC-011. No se crea OOC-016. OOC-017 no se marca hecha: no hubo sesiones reales de playtest. No se crea OOC-018 y no se marca hecha: no hay un APK verificable. OOC-019 recoge cortes de UX presencial; solo se formalizan las historias priorizadas. OOC-020 migra la UI a la identidad visual aprobada (pantallas nativas; sin imágenes estáticas como pantalla).
 
 ---
 
@@ -1164,7 +1166,7 @@ El límite de lo reusable quedó en `docs/ARCHITECTURE.md` y en `docs/MODO_PRESE
 **Estado:** DONE  
 **Dependencias:** OOC-015.2
 
-`docs/ARQUITECTURA_PRESENCIAL.md` separa el camino local del online. La copia en TypeScript queda limitada al núcleo puro y todavía no tiene código. No se agrega una dependencia. La sección 21 de `docs/ARCHITECTURE.md` distingue lo confirmado de las recomendaciones.
+`docs/ARQUITECTURA_PRESENCIAL.md` separa el camino local del online. La copia en TypeScript queda limitada al núcleo puro. Ese núcleo ya está en el cliente; esta historia no lo agregó. No se agrega una dependencia. La sección 21 de `docs/ARCHITECTURE.md` distingue lo confirmado de las recomendaciones.
 
 **Criterios de aceptación:**
 
@@ -1206,7 +1208,9 @@ El límite de lo reusable quedó en `docs/ARCHITECTURE.md` y en `docs/MODO_PRESE
 **Estado:** BLOCKED  
 **Dependencias:** OOC-015.2, OOC-015.3, OOC-015.4, OOC-015.5, OOC-004, OOC-009.1
 
-No depende de OOC-010 y no bloquea OOC-011. No se implementa mientras sigan abiertas las decisiones que cambian qué se muestra o qué se borra: el catálogo de 15 o 16 situaciones, la carta al reanudar, volver a mostrar una carta oculta, la cubierta de la carga, Inicio y el atrás, el diálogo de reiniciar y de salir del marcador, el momento de borrar el archivo, comprobar `L × 2 > N`, señalar a tres o más, el orden del marcador, quién confirma, los rótulos, el socket de invitado durante la partida local y cómo llegar al online sin abandonar.
+No depende de OOC-010 y no bloquea OOC-011. No se cierra mientras sigan abiertas las decisiones que cambian qué se muestra o qué se borra: el catálogo de 15 o 16 situaciones, la carta al reanudar, volver a mostrar una carta oculta, la cubierta de la carga, Inicio y el atrás, el diálogo de reiniciar y de salir del marcador, el momento de borrar el archivo, comprobar `L × 2 > N`, señalar a tres o más, el orden del marcador, quién confirma, los rótulos, el socket de invitado durante la partida local y cómo llegar al online sin abandonar.
+
+El cliente ya tiene el núcleo local y pruebas de unidad. La historia sigue BLOCKED: no hay corrida en un teléfono, no hay paridad con Django y las decisiones de arriba siguen abiertas.
 
 **Criterios de aceptación:**
 
@@ -1214,5 +1218,113 @@ No depende de OOC-010 y no bloquea OOC-011. No se implementa mientras sigan abie
 - [ ] Las pantallas siguen la fase guardada y no muestran la carta de otro jugador antes de la revelación.
 - [ ] La persistencia se limita a lo confirmado en OOC-015.4.
 - [ ] Los tests de paridad coinciden con los casos de Django. Si divergen, manda Django.
-- [ ] No se agrega una dependencia.
+- [x] No se agrega una dependencia.
 - [ ] El online y OOC-011 a OOC-014 quedan intactos.
+
+## OOC-019 — Pulido de UX del modo presencial
+
+**Prioridad:** P2  
+**Estado:** IN_PROGRESS  
+**Objetivo:** cerrar salidas y claridad del flujo presencial sin inventar reglas nuevas del reglamento.  
+**Dependencias:** OOC-015
+
+Las demás historias propuestas en `docs/UX_AUDIT.md` (OOC-019.2 a OOC-019.5 y OOC-019.7) no se crean aquí hasta priorizarlas. OOC-019.8 es pulido del reparto y la carga; OOC-019.9 resultados y clasificación; OOC-019.10 regresión/integración (no la pasada visual genérica de la auditoría).
+
+### OOC-019.6 — Volver a jugar con los mismos participantes
+
+**Prioridad:** P2  
+**Estado:** DONE  
+**Dependencias:** OOC-015.4, OOC-015.5
+
+Desde el marcador final se puede empezar otra partida presencial con los mismos nombres y orden, o abrir Nombres para editarlos. No hay historial ni revancha reglamentaria. Los participantes no se editan durante una partida activa.
+
+**Criterios de aceptación:**
+
+- [x] El marcador ofrece «Volver a jugar»: conserva nombres y orden, reparte una partida nueva, reinicia puntos y rondas, restablece pilas y descarta cartas, votos y resultados anteriores.
+- [x] Una sola partida activa: el documento se reemplaza; no hay partidas duplicadas ni historial.
+- [x] El nuevo estado se persiste y la recuperación abre Carta.
+- [x] El marcador ofrece «Cambiar jugadores»: abre Nombres con la lista previa editable, sin progreso de la partida terminada.
+- [x] No se pueden modificar participantes durante una partida activa.
+- [x] Hay pruebas de unidad e integración del cierre.
+- [x] La navegación y la persistencia documentan estas salidas.
+
+### OOC-019.8 — Mejoras UX del reparto privado y votación física
+
+**Prioridad:** P2  
+**Estado:** DONE  
+**Dependencias:** OOC-015.5
+
+Mejora el pase de un solo teléfono y el registro de gestos físicos ya vistos en la mesa. No cambia reglas, puntuación ni contratos online. No introduce votación online ni expone roles secretos en la carga.
+
+**Criterios de aceptación:**
+
+- [x] El turno del reparto es claro; la carta solo aparece con «Ver carta»; «Ocultar» es visible; se indica cuándo pasar el teléfono.
+- [x] No se revelan cartas anteriores; al ir a segundo plano la carta se cubre sin avanzar el turno; al reanudar `viewing` la pasada vuelve cubierta.
+- [x] La carga lista participantes, gestos point/fist/v, permite corregir, muestra resumen y bloquea confirmaciones incompletas.
+- [x] Al reanudar la carga, una cubierta pide Continuar antes de mostrar gestos anotados; no muestra cartas ni roles.
+- [x] La evaluación y puntuación existentes quedan intactas.
+- [x] Hay pruebas de privacidad del pase, cubierta de carga y registro de votos.
+- [x] La navegación y la auditoría documentan estos comportamientos.
+
+### OOC-019.9 — Mejoras de resultados y clasificación presencial
+
+**Prioridad:** P2  
+**Estado:** DONE  
+**Dependencias:** OOC-015.5, OOC-019.6
+
+Presenta resultados de ronda y clasificación sin recalcular puntuaciones ni cambiar reglas. Una fila por persona; roles visibles tras la revelación; clasificación ordenada por puntos.
+
+**Criterios de aceptación:**
+
+- [x] Se muestran cartas reveladas, gestos/selecciones, puntos de ronda y totales acumulados con jerarquía visual distinta.
+- [x] Equipos e impostores se identifican visualmente una vez revelados.
+- [x] La clasificación está ordenada por puntos (empates estables); ganadores y empates se muestran al terminar.
+- [x] CTAs correctos: Siguiente ronda / Reiniciar en resultados; Volver a jugar / Cambiar jugadores en marcador.
+- [x] No se recalculan puntos en la UI; no se revelan resultados antes de confirmar la votación.
+- [x] Hay pruebas de presentación y regresión de dominio.
+- [x] La navegación y la auditoría documentan el layout.
+
+### OOC-019.10 — Integración y pruebas de regresión de OOC-019
+
+**Prioridad:** P2  
+**Estado:** DONE  
+**Dependencias:** OOC-019.6, OOC-019.8, OOC-019.9
+
+Verifica la gestión de partidas y las mejoras UI/UX de la épica con automatización y un informe de resultados reales. No inventa playtests manuales ni supervivencia al kill del proceso.
+
+**Criterios de aceptación:**
+
+- [x] Escenarios 1–13 y 15–16 cubiertos por pruebas (incl. reinicio en `viewing` / `conversation` / `recording` / `results`).
+- [x] Escenario 14 documentado: recovery in-process OK; kill de proceso = limitación conocida (Map).
+- [x] Escenario 17: suite online del cliente ejecutada; backend documentado como bloqueado por entorno en esta corrida.
+- [x] Herramientas mobile ejecutadas: typecheck, lint, format, jest (PASS).
+- [x] Informe en `docs/OOC-019_REGRESSION_REPORT.md` con matriz, defectos, pendientes y recomendación GO/NO-GO.
+- [x] No se marcaron como ejecutadas pruebas manuales ni de dispositivo no corridas.
+
+## OOC-020 — Rediseño UI/UX e identidad visual
+
+**Prioridad:** P2  
+**Estado:** IN_PROGRESS  
+**Objetivo:** reemplazar la UI minimal actual por la identidad aprobada (menta, navy, crema, amarillo, coral; tipografía redondeada; ilustraciones cartoon) con pantallas nativas reales.  
+**Dependencias:** OOC-009, OOC-019
+
+No cambia reglas de negocio ni contratos. No usa imágenes estáticas como pantalla completa. Las historias 020.2–020.7 se formalizan al priorizarlas; el orden está en `docs/UI_REDESIGN_PLAN.md`.
+
+### OOC-020.1 — Auditoría visual y plan de migración UI/UX
+
+**Prioridad:** P2  
+**Estado:** DONE  
+**Dependencias:** OOC-019.10
+
+Inventaria pantallas, componentes, tema, navegación, deuda visual y lo preservable de OOC-019. Propone design system y un plan incremental. No modifica código ni añade dependencias.
+
+**Criterios de aceptación:**
+
+- [x] Inspección del frontend y de GDD / ARCHITECTURE / BACKLOG / UX_AUDIT.
+- [x] Inventario de pantallas, componentes, estilos, navegación, hooks y servicios.
+- [x] Revisión de funcionalidades OOC-019 a preservar.
+- [x] Componentes reutilizables, hardcodes y duplicaciones documentados.
+- [x] Arquitectura de design system y plan incremental de migración.
+- [x] Assets gráficos faltantes identificados.
+- [x] Entrega en `docs/UI_REDESIGN_PLAN.md` (auditoría, riesgos, migración).
+- [x] Sin cambios en `mobile/src/**` ni dependencias nuevas.

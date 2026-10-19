@@ -375,7 +375,7 @@ En el presencial hay una sola lista de nombres y no hay código de sala. La apli
 
 ### Pendiente
 
-Siguen sin decidirse, y esta sección no los convierte en regla: el catálogo de 15 o 16 situaciones, si el dispositivo comprueba `L × 2 > N`, qué ocurre si falta un gesto al confirmar, señalar a tres o más personas, quién confirma, si durante la carga se muestran las cartas, el orden visual del marcador, el orden en que se pasa el teléfono y si una carta ya oculta puede verse otra vez. La carta visible al cerrar la aplicación, abandonar, reiniciar, descartar y el momento de borrar la partida terminada están en `docs/PERSISTENCIA_PRESENCIAL.md` como propuestas. La navegación está en `docs/NAVEGACION_PRESENCIAL.md`.
+Siguen sin decidirse, y esta sección no los convierte en regla: el catálogo de 15 o 16 situaciones, si el dispositivo comprueba `L × 2 > N`, qué ocurre si falta un gesto al confirmar, señalar a tres o más personas, quién confirma, si durante la carga se muestran las cartas, el orden visual del marcador, el orden en que se pasa el teléfono y si una carta ya oculta puede verse otra vez. El reglamento y OOC-010 no dicen si dos jugadores pueden llamarse igual, ni si un cambio de mayúsculas es el mismo nombre. No se unen las mayúsculas. Reiniciar conserva los nombres, pide confirmación y reparte otra partida. Desde el marcador final, volver a jugar hace lo mismo y cambiar jugadores abre Nombres con esa lista editable. Abandonar pide confirmación, borra la partida activa y vuelve al inicio. La carta visible al cerrar la aplicación, descartar y el momento de borrar la partida terminada están en `docs/PERSISTENCIA_PRESENCIAL.md` como propuestas. La navegación está en `docs/NAVEGACION_PRESENCIAL.md`.
 
 ---
 

@@ -13,12 +13,12 @@ No se reutilizan `SecretCardScreen`, `ConversationScreen`, `VotingScreen`, `Resu
 Cada fase de la interfaz tiene una pantalla. Si la ruta no coincide con la fase del documento, se reemplaza la ruta por la de esa fase y no se dibuja la carta ni el voto de la ruta equivocada. El cambio de fase deja una sola ruta en el stack: el atrás no puede volver a la carta del jugador anterior.
 
 - Inicio, la `Home` ya existente. Sin archivo local ofrece la entrada al presencial, además de crear sala, unirse y componentes. El rótulo de esa entrada no está definido.
-- Nombres, fase `setup`. Anota de 4 a 8 nombres en el orden guardado. No muestra cartas ni reparte hasta que el módulo de partida acepte la lista y haya catálogo.
-- Carta, fase `viewing`. Un jugador. Número y texto solo si el documento dice que la carta está visible y la decisión de producto permite mostrarla. Ocultar es una acción explícita. El siguiente jugador solo después de ocultar. No muestra descarte, rol ni otra mano.
-- Mesa, fase `conversation`. Sin carta en pantalla. Una acción explícita abre la carga. No hay manos, «¡Basta!» ni cuenta regresiva.
-- Carga, fase `recording`. Borradores editables de quien ya tiene una elección aceptada. Confirmar solo si el módulo acepta todas las elecciones juntas. No confirma dos veces.
-- Resultado, fase `results`. La ronda ya puntuada: nombre, carta, gesto, señalados, puntos y una explicación. No vuelve a puntuar.
-- Marcador final, fase `finished`. Totales y quienes empatan en el máximo. No hay revancha ni ronda siguiente.
+- Nombres, fase `setup`. Anota de 4 a 8 nombres en el orden guardado. No muestra cartas ni reparte hasta que el módulo de partida acepte la lista. El mazo es `backend/cards.json`.
+- Carta, fase `viewing`. Un jugador. Indica el turno. Número y texto solo tras «Ver carta». Ocultar es una acción explícita. El siguiente jugador solo después de ocultar. Al ir a segundo plano la carta se cubre sin avanzar el turno. No muestra descarte, rol ni otra mano.
+- Mesa, fase `conversation`. Sin carta en pantalla. Una acción explícita abre la carga. No hay manos, «¡Basta!» ni cuenta regresiva. OOC-010 no define esta pantalla: la mesa usa esa fase, ya escrita aquí y en la arquitectura presencial.
+- Carga, fase `recording`. Al entrar pide Continuar antes de mostrar gestos anotados. Borradores editables de quien ya tiene una elección aceptada. Confirmar solo si el módulo acepta todas las elecciones juntas. No confirma dos veces. No muestra cartas ni roles.
+- Resultado, fase `results`. Una fila por persona: rol (equipo/impostor), carta, gesto, señalados, puntos de la ronda y total, más una explicación. Clasificación ordenada por puntos. No vuelve a puntuar.
+- Marcador final, fase `finished`. Misma pantalla con clasificación por puntos y quienes empatan en el máximo. Ofrece «Volver a jugar» con las mismas personas y «Cambiar jugadores» para editar la lista en Nombres. No hay revancha reglamentaria ni ronda siguiente aparte de esas salidas.
 - Aviso de archivo inválido. No es una fase. Explica que no se puede reanudar. El archivo sigue hasta descartarlo. No reparte una partida encima.
 
 ## Transiciones válidas
@@ -44,9 +44,25 @@ flowchart TD
   results -->|quedan pilas| card
   results -->|no quedan pilas| score
   score -->|salir del marcador| home
+  card -->|reiniciar confirmado| card
+  table -->|reiniciar confirmado| card
+  record -->|reiniciar confirmado| card
+  results -->|reiniciar confirmado| card
+  score -->|volver a jugar confirmado| card
+  score -->|cambiar jugadores confirmado| setup
+  setup -->|abandonar confirmado| home
+  card -->|abandonar confirmado| home
+  table -->|abandonar confirmado| home
+  record -->|abandonar confirmado| home
+  results -->|abandonar confirmado| home
+  score -->|abandonar confirmado| home
 ```
 
+Reiniciar, durante la partida y tras confirmar, guarda una partida nueva con los mismos nombres y abre Carta cubierta. En el marcador final, «Volver a jugar» hace lo mismo y «Cambiar jugadores» reemplaza el documento por un setup con esos nombres, editable en Nombres. Abandonar, tras confirmar, borra el documento y vuelve a Inicio. Cancelar deja la fase actual. Inicio sin confirmar no abandona.
+
 La pantalla no ofrece saltar de nombres a mesa, de carta a carga, de mesa a resultado ni de carga a la carta del siguiente. Tampoco abrir la ronda siguiente con la anterior sin puntuar, ni abrirla si no alcanzan las pilas. Ocultar no revela al siguiente en el mismo paso. El orden de la pasada es el orden guardado de los nombres. El reglamento no confirma que ese sea el orden de la mesa.
+
+Confirmar una lista válida sortea 15 pilas si hay 4 a 6 nombres y 16 si hay 7 u 8, desde las 36 de `backend/cards.json`. Reparte la primera ronda y abre Carta en `viewing`. La carta queda cubierta: el número y el texto aparecen solo con Ver carta.
 
 ## Al iniciar
 
@@ -58,7 +74,7 @@ Con un archivo ilegible, de otra versión o incoherente, se muestra el aviso y n
 
 ## Confirmación
 
-No hay deshacer. Piden confirmación antes de borrar progreso aceptado: abandonar la partida activa, y descartar un archivo inválido. Reiniciar es el mismo efecto que abandonar y crear otra. Si esa acción pide su propio diálogo sigue pendiente en la persistencia.
+No hay deshacer. Piden confirmación antes de borrar progreso aceptado: abandonar la partida activa, reiniciar la partida activa, volver a jugar desde el marcador, cambiar jugadores desde el marcador, y descartar un archivo inválido. Reiniciar y volver a jugar conservan los nombres, reparte otra vez y dejan una sola ruta en Carta. Cambiar jugadores deja una sola ruta en Nombres.
 
 No piden este diálogo: ocultar la carta, abrir la carga, confirmar el voto y pasar a la ronda siguiente. Salir del marcador final borra el archivo según la recomendación ya escrita. Un diálogo extra ahí no está decidido.
 
@@ -66,11 +82,11 @@ Inicio y el atrás del sistema, con una partida activa, no están decididos. Si 
 
 ## Vacíos, errores y recuperación
 
-Con la lista de nombres vacía se puede anotar y no se reparte. Con menos de 4, más de 8, un nombre vacío, de más de 80 caracteres o repetido, el módulo lo rechaza y la pantalla sigue en nombres. Sin catálogo de 15 o 16 situaciones no se reparte. La carta oculta no muestra número ni texto. La mesa no muestra manos. Si en la carga falta una elección válida, no se confirma. Una elección inválida no entra al archivo. Si la escritura se corta, queda el documento anterior. Ante un archivo inválido, el aviso permite descartarlo después de confirmar, y eso vuelve a Inicio. El resultado y el marcador no se recalculan. Este modo no tiene reintento de red.
+Con la lista de nombres vacía se puede anotar y no se reparte. Con menos de 4, más de 8, un nombre vacío, de más de 80 caracteres o repetido, el módulo lo rechaza y la pantalla sigue en nombres. Si el archivo de 36 situaciones no alcanza para las 15 o 16 pilas, no se reparte y se queda en nombres. La carta oculta no muestra número ni texto. La mesa no muestra manos. Si en la carga falta una elección válida, no se confirma. Una elección inválida no entra al archivo. Si la escritura se corta, queda el documento anterior. Ante un archivo inválido, el aviso permite descartarlo después de confirmar, y eso vuelve a Inicio. El resultado y el marcador no se recalculan. Este modo no tiene reintento de red.
 
 ## Privacidad
 
-La carta de otro jugador no se dibuja en nombres, carta, mesa ni durante el cambio de ruta. En resultado y marcador final solo entra la ronda ya revelada. Qué hacer si el proceso murió con la carta visible, si quien ya la ocultó puede verla otra vez, y si la carga muestra cartas además de gestos, siguen pendientes: la navegación no elige por su cuenta. Al reanudar `viewing` con la carta guardada como oculta no se muestra número ni texto hasta una acción explícita. Al reanudar la carga, la cubierta «continuar» antes de mostrar borradores sigue pendiente.
+La carta de otro jugador no se dibuja en nombres, carta, mesa ni durante el cambio de ruta. En resultado y marcador final solo entra la ronda ya revelada. Al reanudar `viewing` la pasada vuelve a empezar oculta. Al ir a segundo plano con la carta visible se cubre sin pasar al siguiente. Al reanudar la carga, Continuar precede a los gestos anotados; la carga no muestra cartas ni roles. Si quien ya ocultó su carta puede verla otra vez sigue pendiente.
 
 ## Diferencias con el online
 
@@ -78,10 +94,10 @@ El online va de Inicio a crear o unirse, lobby, carta, conversación, votación,
 
 ## Pendiente
 
-- Rótulos de la entrada presencial, ocultar, abrir carga, ronda siguiente, abandonar, reiniciar y descartar.
+- Rótulos de la entrada presencial, ocultar, abrir carga, ronda siguiente y descartar. Reiniciar usa «Reiniciar partida». En el marcador, «Volver a jugar» y «Cambiar jugadores». Abandonar usa «Abandonar partida».
 - Si Inicio o el atrás abandonan o solo dejan el archivo.
-- Si reiniciar y salir del marcador final piden diálogo.
-- Carta visible al reanudar, volver a ver una carta ya oculta, y si la carga muestra cartas.
+- Si salir del marcador final pide diálogo. Volver a jugar y cambiar jugadores ya lo piden.
+- Volver a ver una carta ya oculta.
 - Si al abrir con partida válida se puede llegar al online sin abandonar. La persistencia abre la fase guardada.
 - Si el socket de una sesión de invitado ya abierta debe quedar quieto mientras se mira la partida local. Las pantallas locales no lo usan.
-- Siguen abiertos, y esta navegación no los cierra: el catálogo, comprobar `L × 2 > N`, señalar a tres o más, el orden visual del marcador, quién confirma y el orden de la mesa.
+- Siguen abiertos, y esta navegación no los cierra: el catálogo, comprobar `L × 2 > N`, señalar a tres o más, quién confirma y el orden de la mesa. El marcador se ordena por puntos (empate estable por orden de nombres).

@@ -52,13 +52,13 @@ La arquitectura proponía restaurar la carta oculta. Esta especificación no lo 
 - Restaurar oculta y permitir mostrarla otra vez con una acción explícita. Quien abra el teléfono no la ve. La misma persona puede leerla de nuevo. El reglamento no dice si eso está permitido.
 - Restaurar oculta y no dejar mostrarla de nuevo. Quien no alcanzó a leerla pierde la carta. Nadie más la ve en el teléfono.
 
-La técnica puede guardar el indicador en los tres casos. La elección no sale del GDD.
+La técnica puede guardar el indicador en los tres casos. La elección no sale del GDD. La pantalla de carta guarda si está visible solo en memoria, siempre empieza oculta al reanudar y se cubre al ir a segundo plano sin avanzar el turno. No hay archivo de la partida en disco por defecto, así que cerrar el proceso no restaura una carta visible. Cerrar la votación también queda solo en memoria: cerrar la aplicación no restaura ese cierre ni elige una política de reanudación.
 
 ## Otras fases al cerrar
 
 Tampoco están decididas. Consecuencias:
 
-- Durante `recording`, restaurar los borradores muestra gestos ya cargados a quien abra el teléfono. La mesa, según la sección 9 del reglamento, ya mostró gestos y cartas. Falta confirmar si la carga, además, muestra las cartas en el dispositivo. Cubrir la carga con una acción «continuar» evita mostrarlas solas al desbloquear.
+- Durante `recording`, la pantalla pide Continuar antes de mostrar gestos ya cargados. La carga no muestra el número ni el texto de la carta. La mesa, según la sección 9 del reglamento, ya mostró gestos y cartas en físico.
 - Durante `results` o `finished`, las cartas de esa ronda ya son resultado. Mostrarlas al reanudar no adelanta una carta de la ronda siguiente.
 - Durante `conversation`, no hay carta en pantalla. Reanudar no revela una mano.
 - Un corte antes de que el archivo nuevo reemplace al anterior deja la acción sin guardar. No corrompe la partida aceptada.
@@ -67,11 +67,13 @@ Tampoco están decididas. Consecuencias:
 
 El reglamento no define estas acciones. Propuesta, pendiente de producto:
 
-- Abandonar borra el archivo y vuelve al inicio. La partida no se puede reanudar.
-- Reiniciar es una partida nueva. No reutiliza las pilas ya consumidas ni los puntos. Es el mismo efecto que abandonar y crear otra.
+- Abandonar pide confirmación, borra el documento activo y la copia en memoria, invalida la recuperación cacheada y vuelve al inicio. Cancelar no escribe. La partida no se puede reanudar.
+- Reiniciar pide confirmación, conserva los mismos jugadores en el mismo orden y reemplaza el documento activo por un reparto nuevo: sin puntos, votos ni pilas consumidas. Cancelar no escribe. No es abandonar.
+- Volver a jugar, solo desde el marcador final, usa el mismo reemplazo que reiniciar: una sola clave activa, sin historial, y abre Carta.
+- Cambiar jugadores, solo desde el marcador final, pide confirmación y reemplaza el documento activo por un setup con los mismos nombres y orden, sin pilas, rondas, votos ni puntos. La lista vuelve a ser editable. Cancelar no escribe.
 - Descartar, ante un archivo inválido, también lo borra. Sin eso, un archivo ilegible impediría empezar otra.
 
-No hay archivo de deshecho.
+No hay archivo de deshecho ni historial de partidas.
 
 ## Al terminar
 
@@ -89,8 +91,8 @@ Un documento que dice versión 1 pero trae un gesto desconocido, un jugador repe
 
 - Producto: cuál de las tres alternativas de la carta visible al reanudar.
 - Producto: si quien ya ocultó su carta puede volver a verla.
-- Producto: si al reanudar la carga hace falta una acción previa antes de mostrar borradores o cartas.
+- Producto: si al reanudar la carga la cubierta Continuar debe pedirse también tras un cambio de aplicación sin remount.
 - Producto: borrar el archivo al salir del marcador final, o en el momento en que la partida pasa a `finished`.
-- Producto: los nombres de abandonar, reiniciar y descartar, y si reiniciar pide confirmación.
+- Producto: el nombre de descartar. Abandonar, reiniciar, volver a jugar y cambiar jugadores ya piden confirmación.
 - Técnico, ya alineado con la arquitectura: un solo archivo, escritura que no pisa el anterior si se corta, confirmar en un solo reemplazo, sin historial y sin mezclar el token online.
 - Siguen abiertos, y esta especificación no los cierra: el catálogo de 15 o 16 situaciones, comprobar `L × 2 > N`, señalar a tres o más, el orden visual del marcador y quién confirma.
