@@ -15,7 +15,9 @@ export function tablePresentation(match: LocalMatch | null): TablePresentation {
   const round = match?.rounds.find((item) => item.status !== 'finished');
   return {
     roundHeading:
-      round !== undefined ? localRoundHeading(round.number) : localRoundHeading(1),
+      round !== undefined
+        ? localRoundHeading(round.number)
+        : localRoundHeading(1),
     phaseLabel: conversationPhaseLabel,
     canOpenRecord: match?.phase === 'conversation',
   };

@@ -124,8 +124,8 @@ describe('localResults UI OOC-020.10', () => {
     expect(presented.rows.map((row) => row.totalPoints)).toEqual(
       view.rows.map((row) => row.totalPoints),
     );
-    expect(presented.standings.every((row, index) => row.rank === index + 1)).toBe(
-      true,
-    );
+    expect(
+      presented.standings.every((row, index) => row.rank === index + 1),
+    ).toBe(true);
   });
 });

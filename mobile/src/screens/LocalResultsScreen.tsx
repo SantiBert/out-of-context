@@ -205,7 +205,9 @@ function Revealed({
   return (
     <ResultsShell>
       <Heading>{copy.title}</Heading>
-      <Text style={styles.roundLabel}>{localRoundHeading(presentation.roundNumber)}</Text>
+      <Text style={styles.roundLabel}>
+        {localRoundHeading(presentation.roundNumber)}
+      </Text>
       <HelperText>{copy.message}</HelperText>
       {presentation.winnersLine ? (
         <CelebrationBanner

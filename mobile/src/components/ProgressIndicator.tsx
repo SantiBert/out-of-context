@@ -16,8 +16,7 @@ export function ProgressIndicator({
   const safeTotal = Math.max(total, 1);
   const clamped = Math.min(Math.max(current, 0), safeTotal);
   const ratio = clamped / safeTotal;
-  const accessibilityLabel =
-    label ?? `Progreso ${clamped} de ${safeTotal}`;
+  const accessibilityLabel = label ?? `Progreso ${clamped} de ${safeTotal}`;
 
   return (
     <View

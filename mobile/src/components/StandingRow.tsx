@@ -11,10 +11,7 @@ type StandingRowProps = {
 export function StandingRow({ standing }: StandingRowProps) {
   return (
     <ContentCard>
-      <View
-        accessibilityLabel={standing.accessibilityLabel}
-        style={styles.row}
-      >
+      <View accessibilityLabel={standing.accessibilityLabel} style={styles.row}>
         <View style={styles.rankBadge}>
           <Text style={styles.rankText}>{String(standing.rank)}</Text>
         </View>

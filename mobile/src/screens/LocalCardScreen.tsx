@@ -110,7 +110,9 @@ function LocalPass({ match }: { match: LocalMatch }) {
           <Text accessibilityRole="header" style={styles.playerName}>
             {view.playerName}
           </Text>
-          <Text style={styles.turnLabel}>{localTurnLabel(view.playerName)}</Text>
+          <Text style={styles.turnLabel}>
+            {localTurnLabel(view.playerName)}
+          </Text>
           <Text style={styles.helperOnNavy}>
             {localCoveredCardInstruction(view.playerName)}
           </Text>

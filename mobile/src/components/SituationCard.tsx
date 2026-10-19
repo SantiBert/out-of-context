@@ -13,7 +13,9 @@ export function SituationCard({ number, text }: SituationCardProps) {
     <View
       accessibilityRole="text"
       accessibilityLabel={
-        text === undefined ? `Situación ${number}` : `Situación ${number}: ${text}`
+        text === undefined
+          ? `Situación ${number}`
+          : `Situación ${number}: ${text}`
       }
       style={styles.card}
     >

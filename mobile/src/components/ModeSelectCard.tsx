@@ -43,7 +43,9 @@ export function ModeSelectCard({
     >
       <ModeIcon kind={icon} dark={dark} />
       <View style={styles.textBlock}>
-        <Text style={[styles.title, dark ? styles.titleDark : styles.titleLight]}>
+        <Text
+          style={[styles.title, dark ? styles.titleDark : styles.titleLight]}
+        >
           {title}
         </Text>
         <Text

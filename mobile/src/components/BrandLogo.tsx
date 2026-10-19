@@ -40,8 +40,7 @@ export function BrandLogo({
     );
   }
 
-  const titleColor =
-    variant === 'dark' ? theme.brand.cream : theme.colors.text;
+  const titleColor = variant === 'dark' ? theme.brand.cream : theme.colors.text;
   const accentColor = theme.colors.primary;
 
   return (

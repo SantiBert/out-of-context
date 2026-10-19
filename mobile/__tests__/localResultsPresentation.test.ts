@@ -145,9 +145,7 @@ describe('presentación de resultados presencial', () => {
       `Ganadores: ${board.winners.join(', ')}`,
     );
     expect(board.winners).toEqual(localScoreboard(finished).winners);
-    expect(presented.celebration).toBe(
-      celebrationKind(true, board.winners),
-    );
+    expect(presented.celebration).toBe(celebrationKind(true, board.winners));
     expect(presented.standings[0]?.rank).toBe(1);
   });
 

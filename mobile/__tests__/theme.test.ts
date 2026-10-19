@@ -1,6 +1,12 @@
 import { describe, expect, it } from '@jest/globals';
 
-import { brand, colors, fontFamilies, theme, typography } from '../src/theme/theme';
+import {
+  brand,
+  colors,
+  fontFamilies,
+  theme,
+  typography,
+} from '../src/theme/theme';
 
 describe('theme OOC-020.2', () => {
   it('expone la paleta de marca aprobada', () => {

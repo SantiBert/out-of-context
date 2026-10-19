@@ -34,15 +34,13 @@ describe('rutas de la aplicación', () => {
     expect(isAppRoute('ModeSelect')).toBe(true);
     expect(isAppRoute('OnlineEntry')).toBe(true);
     expect(isAppRoute('LocalMatchConfig')).toBe(true);
-    expect(shouldResetToHome({ routes: [{ name: 'ModeSelect' }] })).toBe(
-      false,
-    );
+    expect(shouldResetToHome({ routes: [{ name: 'ModeSelect' }] })).toBe(false);
     expect(shouldResetToHome({ routes: [{ name: 'OnlineEntry' }] })).toBe(
       false,
     );
-    expect(
-      shouldResetToHome({ routes: [{ name: 'LocalMatchConfig' }] }),
-    ).toBe(false);
+    expect(shouldResetToHome({ routes: [{ name: 'LocalMatchConfig' }] })).toBe(
+      false,
+    );
   });
 
   it('rechaza un nombre desconocido', () => {

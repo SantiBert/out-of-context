@@ -1,10 +1,5 @@
 export type BrandAssetKey =
-  | 'logoLight'
-  | 'logoDark'
-  | 'markLight'
-  | 'markDark'
-  | 'splash'
-  | 'appIcon';
+  'logoLight' | 'logoDark' | 'markLight' | 'markDark' | 'splash' | 'appIcon';
 
 export type BrandAssetStatus = 'ready' | 'missing';
 
@@ -35,7 +30,8 @@ export const brandAssetManifest: Record<BrandAssetKey, BrandAssetEntry> = {
     variant: 'light',
     recommendedSize: '1200x400',
     source: null,
-    notes: 'Logo horizontal sobre fondos claros. Bloqueado: falta archivo aprobado.',
+    notes:
+      'Logo horizontal sobre fondos claros. Bloqueado: falta archivo aprobado.',
   },
   logoDark: {
     key: 'logoDark',
@@ -44,7 +40,8 @@ export const brandAssetManifest: Record<BrandAssetKey, BrandAssetEntry> = {
     variant: 'dark',
     recommendedSize: '1200x400',
     source: null,
-    notes: 'Logo horizontal sobre fondos oscuros. Bloqueado: falta archivo aprobado.',
+    notes:
+      'Logo horizontal sobre fondos oscuros. Bloqueado: falta archivo aprobado.',
   },
   markLight: {
     key: 'markLight',

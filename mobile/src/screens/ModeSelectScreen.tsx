@@ -53,9 +53,7 @@ export function ModeSelectScreen() {
           icon="device"
           disabled={!localAvailable}
           accessibilityHint={
-            localAvailable
-              ? 'Abre la partida presencial'
-              : singleDeviceBusyHint
+            localAvailable ? 'Abre la partida presencial' : singleDeviceBusyHint
           }
           onPress={() => navigation.navigate('LocalSetup')}
         />
