@@ -1,5 +1,6 @@
 import { Modal, StyleSheet, Text, View } from 'react-native';
 
+import { useReducedMotion } from '../hooks/useReducedMotion';
 import { theme } from '../theme/theme';
 import { Button } from './Button';
 
@@ -11,6 +12,7 @@ type ConfirmActionProps = {
   cancelLabel: string;
   onConfirm: () => void;
   onCancel: () => void;
+  confirmVariant?: 'primary' | 'destructive';
 };
 
 export function ConfirmAction({
@@ -21,12 +23,15 @@ export function ConfirmAction({
   cancelLabel,
   onConfirm,
   onCancel,
+  confirmVariant = 'primary',
 }: ConfirmActionProps) {
+  const reduceMotion = useReducedMotion();
+
   return (
     <Modal
       visible={visible}
       transparent
-      animationType="fade"
+      animationType={reduceMotion ? 'none' : 'fade'}
       onRequestClose={onCancel}
     >
       <View style={styles.backdrop}>
@@ -35,7 +40,11 @@ export function ConfirmAction({
             {title}
           </Text>
           <Text style={styles.message}>{message}</Text>
-          <Button label={confirmLabel} onPress={onConfirm} />
+          <Button
+            label={confirmLabel}
+            variant={confirmVariant}
+            onPress={onConfirm}
+          />
           <Button label={cancelLabel} variant="secondary" onPress={onCancel} />
         </View>
       </View>
@@ -46,23 +55,23 @@ export function ConfirmAction({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(26, 26, 26, 0.4)',
+    backgroundColor: theme.colors.overlay,
     alignItems: 'center',
     justifyContent: 'center',
     padding: theme.spacing.xl,
   },
   dialog: {
     alignSelf: 'stretch',
-    backgroundColor: theme.colors.background,
+    backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.card,
     padding: theme.spacing.xl,
     gap: theme.spacing.md,
     ...theme.elevation.card,
   },
   title: {
-    ...theme.typography.label,
-    fontSize: 18,
-    lineHeight: 24,
+    ...theme.typography.heading,
+    fontSize: 22,
+    lineHeight: 28,
     color: theme.colors.text,
   },
   message: {

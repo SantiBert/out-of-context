@@ -1,33 +1,34 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '../components/Button';
 import { ContentCard } from '../components/ContentCard';
 import { Heading } from '../components/Heading';
 import { HelperText } from '../components/HelperText';
+import { HomeButton } from '../components/HomeButton';
 import { LocalAbandonControl } from '../components/LocalAbandonControl';
 import { LocalChangePlayersControl } from '../components/LocalChangePlayersControl';
 import { LocalPlayAgainControl } from '../components/LocalPlayAgainControl';
 import { LocalRestartControl } from '../components/LocalRestartControl';
 import { Message } from '../components/Message';
-import { StatusBadge } from '../components/StatusBadge';
-import { screenStyles } from '../components/screenStyles';
+import { ResultPlayerCard } from '../components/ResultPlayerCard';
+import { StandingRow } from '../components/StandingRow';
 import { deviceRng } from '../features/local/catalog/rng';
 import {
   commitLocalMatch,
   localMatchSaveError,
 } from '../features/local/match/autosave';
 import {
-  localMatchTotalLabel,
   localNextRoundLabel,
   localResultsCopy,
   localRoundHeading,
-  localRoundPointsLabel,
   localStandingsLabel,
+  localTeamsLabel,
 } from '../features/local/match/copy';
 import {
   presentLocalResults,
-  type LocalPresentedRow,
+  type LocalResultsCelebration,
   type LocalResultsPresentation,
 } from '../features/local/match/resultsPresentation';
 import { readLocalMatch } from '../features/local/match/viewing';
@@ -45,10 +46,11 @@ import {
   type LocalRound,
 } from '../features/local/rules/round';
 import { useAppNavigation } from '../hooks/useAppNavigation';
-import { homeRoute } from '../navigation/routes';
+import { useExitToHomeOnBack } from '../hooks/useExitToHomeOnBack';
 import { theme } from '../theme/theme';
 
 export function LocalResultsScreen() {
+  useExitToHomeOnBack();
   const [initial] = useState(readLocalMatch);
   const [match, setMatch] = useState(initial);
   const [saveError, setSaveError] = useState<string | undefined>();
@@ -122,10 +124,24 @@ function latestAwardedRound(match: LocalMatch): LocalRound | undefined {
   return awarded;
 }
 
-function AbsentResults({ message }: { message: string }) {
-  const navigation = useAppNavigation();
+function ResultsShell({ children }: { children: ReactNode }) {
   return (
-    <View style={screenStyles.container}>
+    <SafeAreaView style={styles.safe} edges={['bottom']}>
+      <View style={styles.decorMint} pointerEvents="none" />
+      <View style={styles.decorYellow} pointerEvents="none" />
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+      >
+        {children}
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+function AbsentResults({ message }: { message: string }) {
+  return (
+    <ResultsShell>
       <Heading>Resultados</Heading>
       {message === absentLocalResultMessage ? (
         <HelperText>{message}</HelperText>
@@ -134,12 +150,8 @@ function AbsentResults({ message }: { message: string }) {
       )}
       <LocalRestartControl />
       <LocalAbandonControl />
-      <HomeButton
-        onPress={() =>
-          navigation.reset({ index: 0, routes: [{ name: homeRoute }] })
-        }
-      />
-    </View>
+      <HomeButton />
+    </ResultsShell>
   );
 }
 
@@ -191,34 +203,35 @@ function Revealed({
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.content}>
+    <ResultsShell>
       <Heading>{copy.title}</Heading>
+      <Text style={styles.roundLabel}>{localRoundHeading(presentation.roundNumber)}</Text>
       <HelperText>{copy.message}</HelperText>
-      <HelperText>{localRoundHeading(presentation.roundNumber)}</HelperText>
-      {presentation.rows.map((row) => (
-        <PlayerResultCard key={row.playerId} row={row} />
-      ))}
-      <HelperText>{localStandingsLabel}</HelperText>
-      {presentation.standings.map((row) => (
-        <ContentCard key={row.playerId}>
-          <View
-            accessibilityLabel={row.accessibilityLabel}
-            style={styles.standingRow}
-          >
-            <Text style={styles.name}>{row.name}</Text>
-            <Text style={styles.totalPoints}>{String(row.points)}</Text>
-          </View>
-        </ContentCard>
-      ))}
       {presentation.winnersLine ? (
-        <Text
-          accessibilityRole="text"
-          accessibilityLabel={presentation.winnersLine}
-          style={styles.winners}
-        >
-          {presentation.winnersLine}
-        </Text>
+        <CelebrationBanner
+          line={presentation.winnersLine}
+          celebration={presentation.celebration}
+        />
       ) : null}
+      {presentation.teamLines.length > 0 ? (
+        <>
+          <Text style={styles.sectionLabel}>{localTeamsLabel}</Text>
+          <ContentCard>
+            {presentation.teamLines.map((line) => (
+              <Text key={line} style={styles.teamLine}>
+                {line}
+              </Text>
+            ))}
+          </ContentCard>
+        </>
+      ) : null}
+      {presentation.rows.map((row) => (
+        <ResultPlayerCard key={row.playerId} row={row} />
+      ))}
+      <Text style={styles.sectionLabel}>{localStandingsLabel}</Text>
+      {presentation.standings.map((row) => (
+        <StandingRow key={row.playerId} standing={row} />
+      ))}
       {saveError ? <Message tone="error">{saveError}</Message> : null}
       {nextError ? <Message tone="error">{nextError}</Message> : null}
       {finished ? null : (
@@ -232,93 +245,104 @@ function Revealed({
       {finished ? <LocalPlayAgainControl /> : <LocalRestartControl />}
       {finished ? <LocalChangePlayersControl /> : null}
       <LocalAbandonControl />
-      <HomeButton
-        onPress={() =>
-          navigation.reset({ index: 0, routes: [{ name: homeRoute }] })
-        }
-      />
-    </ScrollView>
+      <HomeButton />
+    </ResultsShell>
   );
 }
 
-function PlayerResultCard({ row }: { row: LocalPresentedRow }) {
+function CelebrationBanner({
+  line,
+  celebration,
+}: {
+  line: string;
+  celebration: LocalResultsCelebration;
+}) {
+  const tone =
+    celebration === 'victory'
+      ? styles.bannerVictory
+      : celebration === 'tie'
+        ? styles.bannerTie
+        : styles.bannerNeutral;
   return (
-    <ContentCard>
-      <View
-        accessibilityLabel={row.accessibilityLabel}
-        style={styles.playerBlock}
-      >
-        <Text style={styles.name}>{row.name}</Text>
-        <StatusBadge
-          label={row.roleLabel}
-          tone={row.role === 'impostor' ? 'danger' : 'success'}
-        />
-        <HelperText>{row.cardLabel}</HelperText>
-        {row.cardText === undefined ? null : (
-          <HelperText>{row.cardText}</HelperText>
-        )}
-        <HelperText>{row.action}</HelperText>
-        <HelperText>{row.explanation}</HelperText>
-        <HelperText>{localRoundPointsLabel}</HelperText>
-        <Text
-          accessibilityLabel={`${localRoundPointsLabel} ${row.roundPoints}`}
-          style={styles.roundPoints}
-        >
-          {String(row.roundPoints)}
-        </Text>
-        <HelperText>{localMatchTotalLabel}</HelperText>
-        <Text
-          accessibilityLabel={`${localMatchTotalLabel} ${row.totalPoints}`}
-          style={styles.totalPoints}
-        >
-          {String(row.totalPoints)}
-        </Text>
-      </View>
-    </ContentCard>
-  );
-}
-
-function HomeButton({ onPress }: { onPress: () => void }) {
-  return (
-    <Button
-      label="Inicio"
-      variant="secondary"
-      accessibilityLabel="Volver al inicio"
-      onPress={onPress}
-    />
+    <View
+      accessibilityRole="text"
+      accessibilityLabel={line}
+      style={[styles.banner, tone]}
+    >
+      <Text style={styles.bannerText}>{line}</Text>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  content: {
-    gap: theme.spacing.lg,
-    padding: theme.spacing.xl,
+  safe: {
+    flex: 1,
     backgroundColor: theme.colors.background,
   },
-  playerBlock: {
-    gap: theme.spacing.sm,
+  decorMint: {
+    position: 'absolute',
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: theme.brand.mint,
+    opacity: 0.1,
+    top: -70,
+    right: -60,
   },
-  standingRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: theme.spacing.md,
+  decorYellow: {
+    position: 'absolute',
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: theme.brand.yellow,
+    opacity: 0.12,
+    bottom: 40,
+    left: -50,
   },
-  name: {
+  content: {
+    flexGrow: 1,
+    gap: theme.spacing.lg,
+    padding: theme.spacing.xl,
+    paddingBottom: theme.spacing.xxl,
+  },
+  roundLabel: {
+    ...theme.typography.label,
+    color: theme.colors.primary,
+    textAlign: 'center',
+  },
+  sectionLabel: {
     ...theme.typography.label,
     color: theme.colors.text,
+    textAlign: 'center',
   },
-  roundPoints: {
-    ...theme.typography.heading,
-    color: theme.colors.primary,
-  },
-  totalPoints: {
+  teamLine: {
     ...theme.typography.body,
-    fontWeight: '600',
-    color: theme.colors.muted,
+    color: theme.colors.text,
   },
-  winners: {
-    ...theme.typography.label,
-    color: theme.colors.success,
+  banner: {
+    alignSelf: 'stretch',
+    borderRadius: theme.radii.card,
+    paddingVertical: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.xl,
+    borderWidth: 2,
+  },
+  bannerVictory: {
+    backgroundColor: theme.colors.successSurface,
+    borderColor: theme.colors.primary,
+  },
+  bannerTie: {
+    backgroundColor: theme.colors.warningSurface,
+    borderColor: theme.brand.yellow,
+  },
+  bannerNeutral: {
+    backgroundColor: theme.colors.neutralSurface,
+    borderColor: theme.colors.border,
+  },
+  bannerText: {
+    ...theme.typography.heading,
+    fontSize: 22,
+    lineHeight: 28,
+    color: theme.colors.text,
+    textAlign: 'center',
   },
 });

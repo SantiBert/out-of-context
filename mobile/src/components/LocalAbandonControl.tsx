@@ -18,6 +18,8 @@ import { Button } from './Button';
 import { ConfirmAction } from './ConfirmAction';
 import { Message } from './Message';
 
+export const abandonConfirmVariant = 'destructive' as const;
+
 export function LocalAbandonControl() {
   const navigation = useAppNavigation();
   const lock = useRef(createSingleFlight());
@@ -74,6 +76,7 @@ export function LocalAbandonControl() {
         message={localAbandonMessage}
         confirmLabel={localAbandonConfirmLabel}
         cancelLabel={localAbandonCancelLabel}
+        confirmVariant={abandonConfirmVariant}
         onConfirm={confirm}
         onCancel={cancel}
       />

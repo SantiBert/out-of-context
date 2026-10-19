@@ -11,20 +11,26 @@ import { CreateRoomScreen } from '../screens/CreateRoomScreen';
 import { HomeScreen } from '../screens/HomeScreen';
 import { JoinRoomScreen } from '../screens/JoinRoomScreen';
 import { LocalCardScreen } from '../screens/LocalCardScreen';
+import { LocalMatchConfigScreen } from '../screens/LocalMatchConfigScreen';
 import { LocalRecordScreen } from '../screens/LocalRecordScreen';
 import { LocalResultsScreen } from '../screens/LocalResultsScreen';
 import { LocalSetupScreen } from '../screens/LocalSetupScreen';
 import { LocalTableScreen } from '../screens/LocalTableScreen';
 import { LobbyScreen } from '../screens/LobbyScreen';
+import { ModeSelectScreen } from '../screens/ModeSelectScreen';
+import { OnlineEntryScreen } from '../screens/OnlineEntryScreen';
 import { ResultsScreen } from '../screens/ResultsScreen';
 import { ScoreboardScreen } from '../screens/ScoreboardScreen';
 import { SecretCardScreen } from '../screens/SecretCardScreen';
 import { VotingScreen } from '../screens/VotingScreen';
+import { useReducedMotion } from '../hooks/useReducedMotion';
+import { theme } from '../theme/theme';
 import {
   homeRoute,
   shouldResetToHome,
   type RootStackParamList,
 } from './routes';
+import { stackScreenAnimation } from './stackAnimation';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -38,6 +44,18 @@ function showHome() {
 }
 
 export function AppNavigator() {
+  const reduceMotion = useReducedMotion();
+  const stackScreenOptions = {
+    headerStyle: { backgroundColor: theme.colors.background },
+    headerTintColor: theme.colors.text,
+    headerTitleStyle: {
+      fontFamily: theme.fontFamilies.display,
+      color: theme.colors.text,
+    },
+    contentStyle: { backgroundColor: theme.colors.background },
+    animation: stackScreenAnimation(reduceMotion),
+  };
+
   return (
     <NavigationContainer
       ref={navigationRef}
@@ -63,11 +81,33 @@ export function AppNavigator() {
         }
       }}
     >
-      <Stack.Navigator initialRouteName={homeRoute}>
+      <Stack.Navigator
+        initialRouteName={homeRoute}
+        screenOptions={stackScreenOptions}
+      >
         <Stack.Screen
           name="Home"
           component={HomeScreen}
-          options={{ title: 'Inicio' }}
+          options={{ title: 'Inicio', headerShown: false }}
+        />
+        <Stack.Screen
+          name="ModeSelect"
+          component={ModeSelectScreen}
+          options={{
+            title: 'Jugar',
+            headerStyle: { backgroundColor: theme.brand.navyDark },
+            headerTintColor: theme.brand.cream,
+            headerTitleStyle: {
+              fontFamily: theme.fontFamilies.display,
+              color: theme.brand.cream,
+            },
+            contentStyle: { backgroundColor: theme.brand.navyDark },
+          }}
+        />
+        <Stack.Screen
+          name="OnlineEntry"
+          component={OnlineEntryScreen}
+          options={{ title: 'En línea' }}
         />
         <Stack.Screen
           name="CreateRoom"
@@ -117,27 +157,69 @@ export function AppNavigator() {
         <Stack.Screen
           name="LocalSetup"
           component={LocalSetupScreen}
-          options={{ title: 'Nombres' }}
+          options={{ title: 'Jugadores' }}
+        />
+        <Stack.Screen
+          name="LocalMatchConfig"
+          component={LocalMatchConfigScreen}
+          options={{ title: 'Partida' }}
         />
         <Stack.Screen
           name="LocalCard"
           component={LocalCardScreen}
-          options={{ title: 'Carta' }}
+          options={{
+            title: 'Carta',
+            headerStyle: { backgroundColor: theme.brand.navyDark },
+            headerTintColor: theme.brand.cream,
+            headerTitleStyle: {
+              fontFamily: theme.fontFamilies.display,
+              color: theme.brand.cream,
+            },
+            contentStyle: { backgroundColor: theme.brand.navyDark },
+          }}
         />
+
         <Stack.Screen
           name="LocalTable"
           component={LocalTableScreen}
-          options={{ title: 'Mesa' }}
+          options={{
+            title: 'Mesa',
+            headerStyle: { backgroundColor: theme.brand.navyDark },
+            headerTintColor: theme.brand.cream,
+            headerTitleStyle: {
+              fontFamily: theme.fontFamilies.display,
+              color: theme.brand.cream,
+            },
+            contentStyle: { backgroundColor: theme.brand.navyDark },
+          }}
         />
         <Stack.Screen
           name="LocalRecord"
           component={LocalRecordScreen}
-          options={{ title: 'Carga' }}
+          options={{
+            title: 'Carga',
+            headerStyle: { backgroundColor: theme.colors.background },
+            headerTintColor: theme.colors.text,
+            headerTitleStyle: {
+              fontFamily: theme.fontFamilies.display,
+              color: theme.colors.text,
+            },
+            contentStyle: { backgroundColor: theme.colors.background },
+          }}
         />
         <Stack.Screen
           name="LocalResults"
           component={LocalResultsScreen}
-          options={{ title: 'Resultados' }}
+          options={{
+            title: 'Resultados',
+            headerStyle: { backgroundColor: theme.colors.background },
+            headerTintColor: theme.colors.text,
+            headerTitleStyle: {
+              fontFamily: theme.fontFamilies.display,
+              color: theme.colors.text,
+            },
+            contentStyle: { backgroundColor: theme.colors.background },
+          }}
         />
       </Stack.Navigator>
     </NavigationContainer>

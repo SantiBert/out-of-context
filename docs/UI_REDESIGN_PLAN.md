@@ -21,7 +21,7 @@ Sustituir la UI funcional/minimal actual por una identidad visual coherente, man
 - No inventar funcionalidades que no existan en el código o el backlog.
 - No cambiar reglas de puntuación, revelación, votación ni contratos API/WebSocket.
 - Preservar los contratos UX de OOC-019.6 / .8 / .9 (pase privado, carga sin roles, resultados post-confirmación, CTAs de cierre).
-- Hex exactos y familia tipográfica exacta quedan **pendientes del kit de marca**; este documento usa **tokens semánticos nombrados**.
+- Hex y tipografía del kit de marca quedaron definidos en OOC-020.2 (`docs/DESIGN_SYSTEM.md`, `mobile/src/theme/theme.ts`).
 
 ### Fuentes consultadas
 
@@ -90,7 +90,7 @@ No hay pantallas huérfanas ni rutas sin screen.
 | `LocalRestartControl` | Reiniciar |
 | `LocalPlayAgainControl` | Volver a jugar |
 | `LocalChangePlayersControl` | Cambiar jugadores |
-| `ScreenPlaceholder` | **Sin consumidores** (legacy) |
+| `ScreenPlaceholder` | **Eliminado** en OOC-020.12 (0 consumidores) |
 
 ### 2.4 Tema actual (`mobile/src/theme/theme.ts`)
 
@@ -120,13 +120,13 @@ No hay pantallas huérfanas ni rutas sin screen.
 
 ### 2.7 Duplicaciones y deuda
 
-1. **HomeButton:** helper local idéntico en LocalCard / LocalRecord / LocalResults; el mismo patrón inline en casi todas las pantallas online.
-2. **Layout dual:** online = `screenStyles.container` centrado; local = `ScrollView` + `content` (gap/padding/background) repetido.
-3. **Cuatro controles ConfirmAction** casi clones (abandon / restart / play again / change players).
-4. **Gesto Señalar / Puño / V** duplicado entre `VotingScreen` y `LocalRecordScreen`.
+1. **HomeButton:** resuelto en OOC-020.11 (`components/HomeButton`).
+2. **Layout dual:** online = `screenStyles.container` centrado; local = shells propios (deuda visual online → OOC-020.13).
+3. **Cuatro controles ConfirmAction** casi clones (abandon / restart / play again / change players); `ConfirmMatchAction` no unificado.
+4. **Gesto Señalar / Puño / V** aún inline en `VotingScreen` (local usa `GesturePicker`).
 5. **Loading inconsistente:** `LoadingIndicator` solo en Catalog.
-6. **ScreenPlaceholder** muerto.
-7. **Assets de producto:** inexistentes (solo plantilla Expo en `mobile/assets/`).
+6. **ScreenPlaceholder:** eliminado en OOC-020.12.
+7. **Assets de producto:** PNG de marca / cartoon pendientes (`BRAND_ASSETS.md`).
 
 ### 2.8 Estilos hardcodeados
 
@@ -138,25 +138,18 @@ No hay pantallas huérfanas ni rutas sin screen.
 
 ## 3. Identidad aprobada (tokens semánticos)
 
-Hex y nombre exacto de fuente = **entrada pendiente del kit de marca**. Mientras tanto, el design system se planifica con roles:
+Kit aplicado en **OOC-020.2** (detalle en `docs/DESIGN_SYSTEM.md`):
 
-| Token semántico | Rol de producto |
+| Token semántico | Hex / rol |
 |---|---|
-| `mint` | Primario de acción / énfasis positivo / superficies frescas |
-| `navy` | Texto fuerte, títulos, contraste sobre crema |
-| `cream` | Fondo de pantalla / atmósfera |
-| `yellow` | Acento de atención, turnos, highlights no destructivos |
-| `coral` | Acento cálido, CTAs secundarios de énfasis, alertas suaves o victoria |
+| `mint` | `#2EC4A6` — primario de acción |
+| `navy` | `#0F4C81` — texto / títulos |
+| `cream` | `#F7F3E9` — fondo |
+| `yellow` | `#F4B400` — aviso / acento |
+| `coral` | `#FF6B6B` — destructivo / error |
+| Tipografía | Baloo 2 (títulos, OFL) + sistema (UI) |
 
-Mapeo previsto sobre tokens actuales (al implementar OOC-020.2):
-
-| Token actual | Evoluciona hacia |
-|---|---|
-| `background` | `cream` (o cream + surface) |
-| `primary` | `mint` o `navy` según contraste de botones (decisión en 020.2 con kit) |
-| `text` / `muted` | escala navy |
-| `success` / `danger` / `warning` | conservar semántica; teñir con coral/yellow/mint si el kit lo define |
-| Tipografía | familia redondeada + pesos heading/body/label/helper |
+Mapeo en `theme.colors`: `background` → cream; `surface` → white; `primary` → mint; `text` → navy; `danger` → coral; `success` → turquoise.
 
 Ilustraciones: estilo **cartoon**, usadas como **elementos** dentro de layouts nativos (hero parcial, sticker, vacío), nunca como captura a pantalla completa.
 
@@ -205,17 +198,23 @@ Orden fijo. Cada paso entrega pantallas nativas usables; no se “tapa” con mo
 | Historia | Entrega | Pantallas / piezas | Criterio de hecho |
 |---|---|---|---|
 | **OOC-020.2** | Tokens + tipografía + primitivos | `theme.ts`, componentes base, Catalog | Catalog muestra paleta nueva; sin romper tests de dominio |
-| **OOC-020.3** | Home y entradas | Home, CreateRoom, JoinRoom | Jerarquía visual clara presencial vs online; mismos flujos |
-| **OOC-020.4** | Flujo presencial | LocalSetup → Card → Table → Record → Results | Privacidad OOC-019.8/.9 intacta; CTAs .6 intactos |
-| **OOC-020.5** | Flujo online | Lobby → SecretCard → Conversation → Voting → Results → Scoreboard | Misma autoridad servidor; sin filtrar cartas ajenas |
-| **OOC-020.6** | Assets cartoon | Elementos en pantallas ya migradas | Ilustraciones como hijos de layout nativo; no fullscreen |
-| **OOC-020.7** | A11y, contraste, limpieza | HomeButton único, GesturePicker, ConfirmMatchAction, retirar ScreenPlaceholder si ya no se usa | Contraste documentado; sin duplicados críticos |
+| **OOC-020.3** | Identidad gráfica y logo | `brandAssets`, BrandLogo/Mark, splash/icon config | Registro + wordmark; PNG finales documentados como pendientes |
+| **OOC-020.4** | Home y entradas | Home (Create/Join intactos) | Jerarquía marca → Jugar/Continuar → online; DONE |
+| **OOC-020.5** | Selección de modo | ModeSelect, OnlineEntry, ModeSelectCard | Un dispositivo / Multidispositivo; DONE |
+| **OOC-020.6** | Gestión de jugadores | LocalSetup + PlayerRosterRow | UI Jugadores 4–8; DONE |
+| **OOC-020.7** | Confirmación de partida | LocalMatchConfig | Resumen dominio + Comenzar; sin opciones inventadas; DONE |
+| **OOC-020.8** | Reparto privado | LocalCard + PrivateDealFrame + SituationCard | Navy; Ver/Ocultar; AppState; DONE |
+| **OOC-020.9** | Mesa / Carga local | LocalTable + LocalRecord + GesturePicker | Navy mesa; cream carga; privacidad OOC-019; DONE |
+| **OOC-020.10** | Resultados / clasificación | LocalResults + ResultPlayerCard + StandingRow | Cream; sin recalcular puntos; DONE |
+| **OOC-020.11** | Nav, animaciones, a11y | HomeButton, reduce-motion, Atrás local | Contraste documentado; sin libs nuevas; DONE |
+| **OOC-020.12** | Integración / cleanup | Informe + borrar ScreenPlaceholder | typecheck/lint/Jest; GO presencial; DONE |
+| **OOC-020.13** | Flujo online UI | Lobby → … → Scoreboard | Misma autoridad servidor; sin filtrar cartas ajenas |
 
 ### Principios por fase
 
 - Migrar **look** sin reescribir dominio (`features/local`, `services/realtime`).
 - Unificar layout al tocar cada pantalla (preferir `ScreenScroll` en formularios largos).
-- Regresión: suite Jest mobile + smoke de OOC-019.10 al cerrar 020.4 y 020.5.
+- Regresión: suite Jest mobile + smoke de OOC-019.10 al cerrar rediseños de flujo local/online.
 
 ---
 
@@ -223,18 +222,19 @@ Orden fijo. Cada paso entrega pantallas nativas usables; no se “tapa” con mo
 
 | Asset | Prioridad | Notas |
 |---|---|---|
-| Fuente redondeada (archivos + licencia) | Alta | Bloquea tipografía real en 020.2 |
-| Valores hex del kit (menta/navy/crema/amarillo/coral) | Alta | Bloquea tokens definitivos |
-| Icono de app + adaptive Android | Media | Hoy plantilla Expo |
-| Splash alineado a crema/menta | Media | |
-| Ilustración Home / atmósfera mesa | Media | Elemento, no pantalla |
-| Carta cubierta / dorso cartoon | Alta para 020.4/020.6 | Debe convivir con Ver/Ocultar |
+| Fuente redondeada (archivos + licencia) | Alta | Hecho en 020.2 (Baloo 2 + OFL) |
+| Valores hex del kit | Alta | Hecho en 020.2 |
+| Logo horizontal light/dark | Alta | Bloqueado; ver `docs/BRAND_ASSETS.md` (020.3) |
+| Icono de app + adaptive Android de marca | Alta | Bloqueado; cream en adaptive; arte Expo de puente |
+| Splash de marca | Media | Cream + `splash-icon` Expo de puente |
+| Ilustración Home / atmósfera mesa | Media | Elemento, no pantalla (020.4/020.7) |
+| Carta cubierta / dorso cartoon | Alta para 020.5/020.7 | Debe convivir con Ver/Ocultar |
 | Iconos o stickers de gestos (Señalar, Puño, V) | Media | GesturePicker |
 | Stickers Equipo / Impostor (post-revelación) | Media | Solo resultados |
 | Vacío / error cartoon | Baja | EmptyState / Message |
 | Victoria / empate | Baja | Marcador final |
 
-Hasta tener assets: 020.2–020.3 pueden usar color + tipografía placeholder y formas nativas.
+Hasta tener PNG de marca: wordmark Baloo + placeholders nativos (`BrandLogo` / `BrandMark`).
 
 ---
 
@@ -245,10 +245,10 @@ Hasta tener assets: 020.2–020.3 pueden usar color + tipografía placeholder y 
 | Sustituir pantallas por imágenes estáticas | Alto — rompe interacción y a11y | Prohibido explícitamente; assets solo como nodos hijos |
 | Filtrar carta/rol en Carga o Carta ajena | Alto — rompe reglamento y OOC-019.8 | Checklist de privacidad en 020.4; tests existentes de privacy |
 | Recalcular puntos en UI al “embellecer” resultados | Alto | Seguir `localResultView` / scoreboard servidor |
-| Contraste crema + menta insuficiente | Medio | Validar en 020.2/020.7; navy para texto |
+| Contraste crema + menta insuficiente | Medio | Validar en 020.2/020.8; navy para texto |
 | Dualidad online/local duplica trabajo visual | Medio | Compuestos compartidos (GesturePicker, layouts) |
 | Persistencia Map (partida se pierde al matar proceso) | Fuera de look | OOC-019.7; no mezclar con rediseño |
-| Inicio no aclara pausa vs abandono | Producto abierto | 020.3 puede mejorar jerarquía; no inventar borrado sin decisión |
+| Inicio no aclara pausa vs abandono | Producto abierto | 020.4 puede mejorar jerarquía; no inventar borrado sin decisión |
 | Dependencias nuevas (fuentes, Lottie, etc.) | Proceso | Cada dependencia requiere historia explícita; 020.1 no añade ninguna |
 
 ---
@@ -256,7 +256,7 @@ Hasta tener assets: 020.2–020.3 pueden usar color + tipografía placeholder y 
 ## 8. Fuera de alcance de OOC-020.1
 
 - Cualquier cambio en `mobile/src/**` o dependencias.
-- Implementar OOC-020.2–020.7.
+- Implementar OOC-020.2–020.8.
 - AsyncStorage / recovery en disco (OOC-019.7).
 - Descartar documento inválido; diálogo Inicio/atrás.
 - Re-ver carta ya oculta.
@@ -266,6 +266,6 @@ Hasta tener assets: 020.2–020.3 pueden usar color + tipografía placeholder y 
 
 ## 9. Resumen ejecutivo
 
-El cliente ya tiene **15 pantallas nativas**, un **theme centralizado** y una base de componentes usable, pero la identidad es **minimal blanca/azul**, sin tipografía ni ilustraciones de producto. OOC-019 cerró comportamientos de presencial que el rediseño debe **respetar**, no reabrir. El camino seguro es: tokens semánticos → primitivos → Home → flujo local → flujo online → assets cartoon embebidos → limpieza/a11y.
+OOC-020 **DONE** para presencial + a11y + cleanup (informe `docs/OOC-020_INTEGRATION_REPORT.md`). Design system y flujo local migrados; faltan PNG de marca y el look online. OOC-019 se respetó en privacidad y scoring.
 
-**Siguiente historia sugerida:** OOC-020.2 (tokens + tipografía + Catalog), con kit de marca (hex + fuente) como entrada.
+**Siguiente historia sugerida:** Flujo online UI (**OOC-020.13**); privacidad OOC-019.

@@ -2,7 +2,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
 
 import { theme } from '../theme/theme';
 
-type ButtonVariant = 'primary' | 'secondary' | 'destructive';
+type ButtonVariant = 'primary' | 'secondary' | 'destructive' | 'accent';
 
 type ButtonProps = {
   label: string;
@@ -52,12 +52,21 @@ function surfaceStyle(variant: ButtonVariant) {
   if (variant === 'secondary') {
     return styles.secondary;
   }
+  if (variant === 'accent') {
+    return styles.accent;
+  }
   return styles.primary;
 }
 
 function labelStyle(variant: ButtonVariant) {
   if (variant === 'secondary') {
     return styles.secondaryLabel;
+  }
+  if (variant === 'destructive') {
+    return styles.destructiveLabel;
+  }
+  if (variant === 'accent') {
+    return styles.accentLabel;
   }
   return styles.primaryLabel;
 }
@@ -66,6 +75,9 @@ function indicatorColor(variant: ButtonVariant) {
   if (variant === 'secondary') {
     return theme.colors.primary;
   }
+  if (variant === 'accent') {
+    return theme.brand.navy;
+  }
   return theme.colors.onPrimary;
 }
 
@@ -73,6 +85,7 @@ const styles = StyleSheet.create({
   base: {
     minHeight: theme.sizes.touch,
     minWidth: 180,
+    alignSelf: 'stretch',
     borderRadius: theme.radii.button,
     alignItems: 'center',
     justifyContent: 'center',
@@ -84,12 +97,16 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.primary,
   },
   secondary: {
-    backgroundColor: theme.colors.background,
+    backgroundColor: theme.colors.surface,
     borderColor: theme.colors.primary,
   },
   destructive: {
     backgroundColor: theme.colors.danger,
     borderColor: theme.colors.danger,
+  },
+  accent: {
+    backgroundColor: theme.brand.yellow,
+    borderColor: theme.brand.yellow,
   },
   inactive: {
     opacity: 0.5,
@@ -103,5 +120,11 @@ const styles = StyleSheet.create({
   },
   secondaryLabel: {
     color: theme.colors.primary,
+  },
+  destructiveLabel: {
+    color: theme.colors.onPrimary,
+  },
+  accentLabel: {
+    color: theme.brand.navy,
   },
 });

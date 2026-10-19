@@ -69,7 +69,7 @@
 | OOC-014 | Mejoras posteriores al MVP | P2 | TODO | OOC-013 |
 | OOC-015 | Modo presencial de un solo dispositivo | P2 | BLOCKED | OOC-004, OOC-009.1 |
 | OOC-019 | Pulido de UX del modo presencial | P2 | IN_PROGRESS | OOC-015 |
-| OOC-020 | Rediseño UI/UX e identidad visual | P2 | IN_PROGRESS | OOC-009, OOC-019 |
+| OOC-020 | Rediseño UI/UX e identidad visual | P2 | DONE | OOC-009, OOC-019 |
 
 **Nota:** OOC-001 figura como `IN_PROGRESS` porque las reglas se documentaron en un borrador, pero todavía deben validarse los detalles pendientes. Los estados de las demás épicas representan el punto de partida previsto y deben actualizarse según el avance real. OOC-015 está `BLOCKED`: el diseño está escrito y la implementación no empieza mientras sigan abiertas las decisiones que cambian qué se muestra o qué se borra. No depende de OOC-010 ni bloquea OOC-011. No se crea OOC-016. OOC-017 no se marca hecha: no hubo sesiones reales de playtest. No se crea OOC-018 y no se marca hecha: no hay un APK verificable. OOC-019 recoge cortes de UX presencial; solo se formalizan las historias priorizadas. OOC-020 migra la UI a la identidad visual aprobada (pantallas nativas; sin imágenes estáticas como pantalla).
 
@@ -1304,11 +1304,11 @@ Verifica la gestión de partidas y las mejoras UI/UX de la épica con automatiza
 ## OOC-020 — Rediseño UI/UX e identidad visual
 
 **Prioridad:** P2  
-**Estado:** IN_PROGRESS  
+**Estado:** DONE  
 **Objetivo:** reemplazar la UI minimal actual por la identidad aprobada (menta, navy, crema, amarillo, coral; tipografía redondeada; ilustraciones cartoon) con pantallas nativas reales.  
 **Dependencias:** OOC-009, OOC-019
 
-No cambia reglas de negocio ni contratos. No usa imágenes estáticas como pantalla completa. Las historias 020.2–020.7 se formalizan al priorizarlas; el orden está en `docs/UI_REDESIGN_PLAN.md`.
+No cambia reglas de negocio ni contratos. No usa imágenes estáticas como pantalla completa. El orden de migración está en `docs/UI_REDESIGN_PLAN.md`. La guía de uso del design system está en `docs/DESIGN_SYSTEM.md`. Alcance cerrado: presencial + a11y compartida + cleanup (020.1–020.12). Look online diferido a **OOC-020.13**. Informe: `docs/OOC-020_INTEGRATION_REPORT.md`.
 
 ### OOC-020.1 — Auditoría visual y plan de migración UI/UX
 
@@ -1328,3 +1328,199 @@ Inventaria pantallas, componentes, tema, navegación, deuda visual y lo preserva
 - [x] Assets gráficos faltantes identificados.
 - [x] Entrega en `docs/UI_REDESIGN_PLAN.md` (auditoría, riesgos, migración).
 - [x] Sin cambios en `mobile/src/**` ni dependencias nuevas.
+
+### OOC-020.2 — Design system (tokens, tipografía y primitivos)
+
+**Prioridad:** P2  
+**Estado:** DONE  
+**Dependencias:** OOC-020.1
+
+Implementa la identidad visual en tokens y componentes base. Catalog como banco de prueba. No rediseña flujos de partida (020.4–.6 tras renumeración).
+
+**Criterios de aceptación:**
+
+- [x] Tokens semánticos y paleta de marca en `mobile/src/theme/theme.ts`.
+- [x] Tipografía Baloo 2 (OFL) para títulos; sistema para UI; carga con `expo-font`.
+- [x] Espaciados, radios, bordes y sombras centralizados.
+- [x] Botones primary / secondary / destructive.
+- [x] TextField con validación visual; ContentCard; ConfirmAction.
+- [x] SelectableOption, ScreenHeader, ProgressIndicator.
+- [x] Catalog muestra la identidad; stack usa colores de theme.
+- [x] Documentación en `docs/DESIGN_SYSTEM.md`.
+- [x] Pruebas de theme/design system; sin romper navegación ni reglas.
+
+### OOC-020.3 — Identidad gráfica y logo
+
+**Prioridad:** P2  
+**Estado:** DONE  
+**Dependencias:** OOC-020.2
+
+Prepara la integración de logo, mark y splash. Wordmark tipográfico Baloo como puente. No inventa PNG finales ni usa arte de terceros. Lista de pendientes en `docs/BRAND_ASSETS.md`.
+
+**Criterios de aceptación:**
+
+- [x] Auditoría de assets actuales y requisitos técnicos documentados.
+- [x] Registro central `mobile/src/theme/brandAssets.ts` (sin require a paths inexistentes).
+- [x] Componentes `BrandLogo` y `BrandMark` (variantes light/dark, tamaños, escalado contain).
+- [x] Home muestra BrandLogo; Catalog muestra variantes light/dark y marks.
+- [x] `app.json`: splash cream + adaptive background cream; íconos Expo como puente.
+- [x] Pendientes/bloqueos de PNG de marca documentados (no se inventó arte final).
+- [x] Pruebas de brandAssets; DESIGN_SYSTEM y UI_REDESIGN_PLAN actualizados (renumeración 020.4–.8).
+
+### OOC-020.4 — Rediseño de la pantalla de inicio
+
+**Prioridad:** P2  
+**Estado:** DONE  
+**Dependencias:** OOC-020.2, OOC-020.3
+
+Rediseña Home con identidad visual, CTA Jugar (amarillo), Continuar partida según recovery, modal Cómo se juega (copy GDD) y acceso online. No inventa descartar partida ni quita Crear sala / Unirse.
+
+**Criterios de aceptación:**
+
+- [x] Lógica de entry en `homeEntry.ts` (canStart / canContinue / continueRoute).
+- [x] Home con fondo crema, decoración menta, BrandLogo/Mark, SafeArea.
+- [x] Jugar (`accent`) y Continuar → reset a fase guardada (Jugar pasa a ModeSelect en OOC-020.5).
+- [x] Modal Cómo se juega con bullets del reglamento; sin ruta inventada.
+- [x] Crear sala / Unirse / Componentes conservados (online se mueve a OnlineEntry en OOC-020.5).
+- [x] Recovery unavailable muestra error; header de Home oculto.
+- [x] Pruebas `homeEntry` y copy de Home; OOC-020.4 documentado.
+
+### OOC-020.5 — Rediseño de selección de modo
+
+**Prioridad:** P2  
+**Estado:** DONE  
+**Dependencias:** OOC-020.4
+
+Pantalla ModeSelect (navy) con tarjetas Un dispositivo / Multidispositivo. Online vía OnlineEntry → CreateRoom/JoinRoom sin cambiar su lógica.
+
+**Criterios de aceptación:**
+
+- [x] Rutas `ModeSelect` y `OnlineEntry` en el stack.
+- [x] `ModeSelectCard` reutilizable (light / darkAccent, iconos geométricos, a11y).
+- [x] Un dispositivo → LocalSetup cuando `canStartLocal`; si no, deshabilitado + hint a Continuar.
+- [x] Multidispositivo → OnlineEntry → Crear sala / Unirse.
+- [x] Home: Jugar → ModeSelect; sin sección En línea duplicada.
+- [x] Sin endpoints nuevos ni ilustraciones copiadas.
+- [x] Pruebas de rutas/modeSelect; UI_REDESIGN renumerado (020.6–.9).
+
+### OOC-020.6 — Rediseño de gestión de jugadores
+
+**Prioridad:** P2  
+**Estado:** DONE  
+**Dependencias:** OOC-020.5
+
+Rediseña LocalSetup (Jugadores) con filas numeradas, Añadir discontinuo y Continuar → revisión. Reutiliza `setup.ts` y persistencia; no cambia duplicados ni ids.
+
+**Criterios de aceptación:**
+
+- [x] UI cream, encabezado Jugadores, límites 4–8, contador.
+- [x] `PlayerRosterRow` con índice visual, ellipsis, Editar/Quitar.
+- [x] `DashedButton` Añadir jugador; Continuar abre revisión existente.
+- [x] Roster inmutable si la partida ya empezó; revisión + Confirmar intactos.
+- [x] KeyboardAvoidingView / ScrollView; errores de validación visibles.
+- [x] Sin cambio de dominio salvo presentación; tests `localSetup` + `localSetupUi`.
+
+### OOC-020.7 — Rediseño de configuración de partida
+
+**Prioridad:** P2  
+**Estado:** DONE  
+**Dependencias:** OOC-020.6
+
+Pantalla de revisión/confirmación (`LocalMatchConfig`). Solo muestra datos del dominio (jugadores, pilas/rondas). No inventa impostores fijos ni temporizador. Comenzar partida ejecuta el deal existente.
+
+**Criterios de aceptación:**
+
+- [x] Auditoría: sin opciones editables de partida en el MVP presencial.
+- [x] Ruta `LocalMatchConfig`; Continuar desde Jugadores navega ahí.
+- [x] Resumen jugadores + info `localDeckConfig` + reglas estáticas.
+- [x] Comenzar partida → confirmPendingSetup + dealLocalMatch + LocalCard.
+- [x] Sin controles de impostores/duración; sin endpoints nuevos.
+- [x] Pruebas `matchConfig`; UI_REDESIGN actualizado.
+
+### OOC-020.8 — Rediseño del reparto privado
+
+**Prioridad:** P2  
+**Estado:** DONE  
+**Dependencias:** OOC-020.7, OOC-019.8
+
+Rediseña LocalCard (navy): turno → Ver carta → situación → Ocultar → pasar. Reutiliza `viewing.ts` y AppState. No re-ver cartas anteriores ni filtrar roles.
+
+**Criterios de aceptación:**
+
+- [x] `PrivateDealFrame` + `SituationCard`.
+- [x] Estados covered / visible / complete con CTAs grandes.
+- [x] AppState cubre sin avanzar; resume cubierta.
+- [x] Sin roles ni cartas ajenas; Continuar → LocalTable.
+- [x] Header navy; tests privacy + `localCardUi`; docs actualizados.
+
+### OOC-020.9 — Rediseño de conversación y votación física
+
+**Prioridad:** P2  
+**Estado:** DONE  
+**Dependencias:** OOC-020.8, OOC-019.8
+
+Rediseña LocalTable (navy) y LocalRecord (crema/menta): fase/ronda, Abrir carga, cubierta de privacidad, GesturePicker, resumen y confirmación incompleta bloqueada. Sin temporizador ni votación online. Reutiliza `vote.ts` y `recordGate`.
+
+**Criterios de aceptación:**
+
+- [x] Mesa navy con ronda, fase Conversación e instrucción; CTA Abrir carga.
+- [x] Carga cream/menta: cover → lista → gestos → correcciones → resumen.
+- [x] `GesturePicker` + StatusBadge; Confirmar disabled si falta registro.
+- [x] Sin secretos anticipados; sin timer; scoring intacto.
+- [x] Tests `localTableUi` / `localRecordUi`; UI_REDESIGN renumerado.
+
+### OOC-020.10 — Rediseño de resultados y clasificación
+
+**Prioridad:** P2  
+**Estado:** DONE  
+**Dependencias:** OOC-020.9, OOC-019.9
+
+Rediseña LocalResults (crema): tarjetas de participante, equipos, gestos, puntos ronda/total, clasificación ordenada, celebración discreta en marcador y CTAs por estado. Consume `presentLocalResults` / `localResultView` sin recalcular puntuación.
+
+**Criterios de aceptación:**
+
+- [x] `ResultPlayerCard` + `StandingRow`; shell cream.
+- [x] Cartas, roles, gestos, equipos y selecciones post-cierre.
+- [x] Puntos ronda vs total diferenciados; ranks; ganadores/empates.
+- [x] Siguiente ronda / Volver a jugar / Cambiar jugadores según estado.
+- [x] Sin revelar fuera de results/finished; tests presentación + `localResultsUi`.
+
+### OOC-020.11 — Navegación, animaciones y accesibilidad
+
+**Prioridad:** P2  
+**Estado:** DONE  
+**Dependencias:** OOC-020.10
+
+Unifica `HomeButton`, Atrás = Inicio en fases locales (sin abandonar), transiciones native-stack con reduce-motion, contraste documentado, KAV en Crear/Unirse y confirmación de abandono destructive. Sin libs de animación nuevas ni cambios de reglas.
+
+**Criterios de aceptación:**
+
+- [x] `HomeButton` único en local + online + Catalog.
+- [x] `useExitToHomeOnBack` en Carta/Mesa/Carga/Resultados.
+- [x] `useReducedMotion` + stack `fade`/`none` + ConfirmAction.
+- [x] Sin animar revelado de carta; abandon confirm destructive.
+- [x] Contraste en DESIGN_SYSTEM; tests `homeButton` / `navigationA11y`.
+
+### OOC-020.12 — Integración final y eliminación de UI obsoleta
+
+**Prioridad:** P2  
+**Estado:** DONE  
+**Dependencias:** OOC-020.11
+
+Audita pantallas migradas, elimina solo código sin referencias (`ScreenPlaceholder`), ejecuta typecheck/lint/Jest con resultados reales y publica informe GO/NO-GO. No rediseña online ni cambia dominio.
+
+**Criterios de aceptación:**
+
+- [x] Auditoría: único muerto borrable = `ScreenPlaceholder` (0 refs).
+- [x] `ScreenPlaceholder` eliminado; docs actualizados.
+- [x] typecheck, lint y Jest verdes (48 suites / 268 tests).
+- [x] Informe `docs/OOC-020_INTEGRATION_REPORT.md` con GO parcial / NO-GO unificación total.
+- [x] Épico OOC-020 DONE; look online → OOC-020.13.
+
+### OOC-020.13 — Rediseño visual del flujo online
+
+**Prioridad:** P2  
+**Estado:** TODO  
+**Dependencias:** OOC-020.12
+
+Migra Lobby → SecretCard → Conversation → Voting → Results → Scoreboard (y pulido Create/Join) a la identidad visual, reutilizando compuestos locales donde aplique (`GesturePicker`, etc.). Misma autoridad servidor; sin filtrar cartas ajenas.

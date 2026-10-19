@@ -10,6 +10,8 @@ describe('rutas de la aplicación', () => {
   it('incluye el recorrido inicial', () => {
     expect(appRoutes).toEqual([
       'Home',
+      'ModeSelect',
+      'OnlineEntry',
       'CreateRoom',
       'JoinRoom',
       'Lobby',
@@ -20,11 +22,27 @@ describe('rutas de la aplicación', () => {
       'Scoreboard',
       'Catalog',
       'LocalSetup',
+      'LocalMatchConfig',
       'LocalCard',
       'LocalTable',
       'LocalRecord',
       'LocalResults',
     ]);
+  });
+
+  it('acepta ModeSelect, OnlineEntry y LocalMatchConfig', () => {
+    expect(isAppRoute('ModeSelect')).toBe(true);
+    expect(isAppRoute('OnlineEntry')).toBe(true);
+    expect(isAppRoute('LocalMatchConfig')).toBe(true);
+    expect(shouldResetToHome({ routes: [{ name: 'ModeSelect' }] })).toBe(
+      false,
+    );
+    expect(shouldResetToHome({ routes: [{ name: 'OnlineEntry' }] })).toBe(
+      false,
+    );
+    expect(
+      shouldResetToHome({ routes: [{ name: 'LocalMatchConfig' }] }),
+    ).toBe(false);
   });
 
   it('rechaza un nombre desconocido', () => {

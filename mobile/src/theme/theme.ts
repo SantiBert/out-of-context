@@ -1,25 +1,50 @@
 import type { TextStyle, ViewStyle } from 'react-native';
 
+/** Hex de marca aprobados (OOC-020.2). Usar solo vía tokens semánticos en UI. */
+export const brand = {
+  mint: '#2EC4A6',
+  navy: '#0F4C81',
+  cream: '#F7F3E9',
+  yellow: '#F4B400',
+  coral: '#FF6B6B',
+  turquoise: '#00C2A8',
+  lilac: '#7B61FF',
+  pink: '#FF428D',
+  navyDark: '#1A1A2E',
+  white: '#FFFFFF',
+} as const;
+
+export const fontFamilies = {
+  display: 'Baloo2-SemiBold',
+  displayBold: 'Baloo2-Bold',
+} as const;
+
 export const colors = {
-  background: '#ffffff',
-  surface: '#f4f6f8',
-  text: '#1a1a1a',
-  muted: '#5c6570',
-  primary: '#1f4b99',
-  onPrimary: '#ffffff',
-  border: '#c5ced6',
-  danger: '#8f1d1d',
-  dangerSurface: '#fde8e8',
-  warning: '#7a4e00',
-  warningSurface: '#fff4d6',
-  success: '#0f6b3c',
-  successSurface: '#e5f6ec',
-  neutral: '#3d4650',
-  neutralSurface: '#eef1f4',
+  background: brand.cream,
+  surface: brand.white,
+  text: brand.navy,
+  muted: '#4A6B8A',
+  primary: brand.mint,
+  onPrimary: brand.white,
+  border: '#B8C9D6',
+  danger: brand.coral,
+  dangerSurface: '#FFE5E5',
+  warning: '#8A6500',
+  warningSurface: '#FFF3CC',
+  success: brand.turquoise,
+  successSurface: '#D9F7F2',
+  neutral: brand.navy,
+  neutralSurface: '#E8EEF3',
+  overlay: 'rgba(26, 26, 46, 0.45)',
+  accentYellow: brand.yellow,
+  accentLilac: brand.lilac,
+  accentPink: brand.pink,
+  accentTurquoise: brand.turquoise,
 };
 
 export const typography = {
   heading: {
+    fontFamily: fontFamilies.display,
     fontSize: 28,
     fontWeight: '600',
     lineHeight: 34,
@@ -51,9 +76,10 @@ export const spacing = {
 };
 
 export const radii = {
-  button: 8,
-  card: 12,
-  field: 8,
+  button: 10,
+  card: 14,
+  field: 10,
+  pill: 999,
 };
 
 export const sizes = {
@@ -67,7 +93,7 @@ export const elevation = {
   },
   card: {
     elevation: 2,
-    shadowColor: colors.text,
+    shadowColor: brand.navyDark,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.12,
     shadowRadius: 3,
@@ -75,10 +101,12 @@ export const elevation = {
 } satisfies Record<string, ViewStyle>;
 
 export const theme = {
+  brand,
   colors,
   typography,
   spacing,
   radii,
   sizes,
   elevation,
+  fontFamilies,
 };

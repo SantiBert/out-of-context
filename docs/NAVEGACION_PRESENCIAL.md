@@ -6,7 +6,7 @@ Especificación revisable, registrada como OOC-015.5. No agrega rutas, pantallas
 
 Hay un solo `NavigationContainer` y el stack de `mobile/src/navigation/AppNavigator.tsx`. Los parámetros de ruta siguen vacíos, como en `mobile/src/navigation/routes.ts`: la carta, el voto y el nombre no viajan en la ruta. `useAppNavigation`, `Button`, `Heading`, `HelperText` y `screenStyles` se pueden usar cuando existan las pantallas.
 
-No se reutilizan `SecretCardScreen`, `ConversationScreen`, `VotingScreen`, `ResultsScreen`, `ScoreboardScreen` ni `LobbyScreen`: leen el token y el socket de un solo miembro. `ScreenPlaceholder` avanza con «Continuar» sin mirar una fase y no sirve para este flujo. `GuestSessionProvider` y `RoomConnectionProvider` siguen envolviendo el navegador para el online. Las pantallas locales no se suscriben a ese socket ni leen `ooc.guest.session`.
+No se reutilizan `SecretCardScreen`, `ConversationScreen`, `VotingScreen`, `ResultsScreen`, `ScoreboardScreen` ni `LobbyScreen`: leen el token y el socket de un solo miembro. `ScreenPlaceholder` se eliminó en OOC-020.12 (no tenía consumidores). `GuestSessionProvider` y `RoomConnectionProvider` siguen envolviendo el navegador para el online. Las pantallas locales no se suscriben a ese socket ni leen `ooc.guest.session`.
 
 ## Pantallas
 

@@ -41,7 +41,7 @@ export function StatusBadge({ label, tone = 'neutral' }: StatusBadgeProps) {
 const styles = StyleSheet.create({
   badge: {
     alignSelf: 'flex-start',
-    borderRadius: theme.radii.button,
+    borderRadius: theme.radii.pill,
     paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing.md,
   },

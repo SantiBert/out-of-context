@@ -1,5 +1,7 @@
 export const appRoutes = [
   'Home',
+  'ModeSelect',
+  'OnlineEntry',
   'CreateRoom',
   'JoinRoom',
   'Lobby',
@@ -10,6 +12,7 @@ export const appRoutes = [
   'Scoreboard',
   'Catalog',
   'LocalSetup',
+  'LocalMatchConfig',
   'LocalCard',
   'LocalTable',
   'LocalRecord',
@@ -20,6 +23,8 @@ export type AppRoute = (typeof appRoutes)[number];
 
 export type RootStackParamList = {
   Home: undefined;
+  ModeSelect: undefined;
+  OnlineEntry: undefined;
   CreateRoom: undefined;
   JoinRoom: undefined;
   Lobby: undefined;
@@ -30,6 +35,7 @@ export type RootStackParamList = {
   Scoreboard: undefined;
   Catalog: undefined;
   LocalSetup: undefined;
+  LocalMatchConfig: undefined;
   LocalCard: undefined;
   LocalTable: undefined;
   LocalRecord: undefined;

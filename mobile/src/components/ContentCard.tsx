@@ -14,10 +14,12 @@ export function ContentCard({ children }: ContentCardProps) {
 const styles = StyleSheet.create({
   card: {
     alignSelf: 'stretch',
-    backgroundColor: theme.colors.background,
+    backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.card,
     padding: theme.spacing.lg,
     gap: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
     ...theme.elevation.card,
   },
 });

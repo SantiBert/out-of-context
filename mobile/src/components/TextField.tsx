@@ -82,7 +82,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radii.field,
     paddingHorizontal: theme.spacing.md,
     color: theme.colors.text,
-    backgroundColor: theme.colors.background,
+    backgroundColor: theme.colors.surface,
     ...theme.typography.body,
   },
   inputError: {

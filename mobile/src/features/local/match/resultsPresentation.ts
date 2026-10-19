@@ -10,6 +10,8 @@ import {
 
 export type LocalResultRole = 'team' | 'impostor';
 
+export type LocalResultsCelebration = 'none' | 'victory' | 'tie';
+
 export type LocalPresentedRow = {
   playerId: string;
   name: string;
@@ -28,15 +30,18 @@ export type LocalPresentedStanding = {
   playerId: string;
   name: string;
   points: number;
+  rank: number;
   accessibilityLabel: string;
 };
 
 export type LocalResultsPresentation = {
   roundNumber: number;
   finished: boolean;
+  teamLines: readonly string[];
   rows: readonly LocalPresentedRow[];
   standings: readonly LocalPresentedStanding[];
   winnersLine: string | undefined;
+  celebration: LocalResultsCelebration;
 };
 
 export function presentLocalResults(
@@ -58,21 +63,44 @@ export function presentLocalResults(
   );
 
   const standings = sortStandings(board.standings, rosterIndex).map(
-    (standing) => ({
+    (standing, index) => ({
       playerId: standing.playerId,
       name: standing.name,
       points: standing.points,
+      rank: index + 1,
       accessibilityLabel: `${standing.name}, ${standing.points} puntos`,
     }),
+  );
+
+  const teamLines = view.teams.map(
+    (team) => `${localCardLabel(team.situation)}: ${team.names.join(', ')}`,
   );
 
   return {
     roundNumber,
     finished,
+    teamLines,
     rows,
     standings,
     winnersLine: finished ? localWinnersLine(board.winners) : undefined,
+    celebration: celebrationKind(finished, board.winners),
   };
+}
+
+export function celebrationKind(
+  finished: boolean,
+  winners: readonly string[],
+): LocalResultsCelebration {
+  if (!finished) {
+    return 'none';
+  }
+  if (winners.length === 1) {
+    return 'victory';
+  }
+  if (winners.length > 1) {
+    return 'tie';
+  }
+  return 'none';
 }
 
 function presentRow(row: LocalResultRow, impostor: boolean): LocalPresentedRow {

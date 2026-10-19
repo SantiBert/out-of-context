@@ -1,6 +1,7 @@
 import { describe, expect, it } from '@jest/globals';
 
 import {
+  celebrationKind,
   presentLocalResults,
   sortStandings,
 } from '../src/features/local/match/resultsPresentation';
@@ -97,6 +98,9 @@ describe('presentación de resultados presencial', () => {
       view.rows.map((row) => row.totalPoints),
     );
     expect(presented.winnersLine).toBeUndefined();
+    expect(presented.celebration).toBe('none');
+    expect(presented.teamLines).toContain('Carta #1: Ana, Luis');
+    expect(presented.standings.map((row) => row.rank)).toEqual([1, 2, 3]);
   });
 
   it('ordena la clasificación por puntos y mantiene empates estables', () => {
@@ -141,6 +145,17 @@ describe('presentación de resultados presencial', () => {
       `Ganadores: ${board.winners.join(', ')}`,
     );
     expect(board.winners).toEqual(localScoreboard(finished).winners);
+    expect(presented.celebration).toBe(
+      celebrationKind(true, board.winners),
+    );
+    expect(presented.standings[0]?.rank).toBe(1);
+  });
+
+  it('celebrationKind distingue victoria, empate y nadie', () => {
+    expect(celebrationKind(false, ['Ana'])).toBe('none');
+    expect(celebrationKind(true, ['Ana'])).toBe('victory');
+    expect(celebrationKind(true, ['Ana', 'Luis'])).toBe('tie');
+    expect(celebrationKind(true, [])).toBe('none');
   });
 
   it('no revela resultados fuera de results o finished', () => {

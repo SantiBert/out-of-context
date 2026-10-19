@@ -1,14 +1,19 @@
 import { useRef, useState } from 'react';
-import { View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useGuestSession } from '../app/GuestSessionProvider';
 import { Button } from '../components/Button';
 import { Heading } from '../components/Heading';
+import { HomeButton } from '../components/HomeButton';
 import { Message } from '../components/Message';
-import { screenStyles } from '../components/screenStyles';
 import { TextField } from '../components/TextField';
 import { useAppNavigation } from '../hooks/useAppNavigation';
-import { homeRoute } from '../navigation/routes';
 import {
   NameValidationError,
   cleanPlayerName,
@@ -18,6 +23,7 @@ import {
   networkMessage,
 } from '../services/api/rooms';
 import { createSingleFlight } from '../services/api/singleFlight';
+import { theme } from '../theme/theme';
 
 export function JoinRoomScreen() {
   const navigation = useAppNavigation();
@@ -78,40 +84,58 @@ export function JoinRoomScreen() {
   }
 
   return (
-    <View style={screenStyles.container}>
-      <Heading>Unirse</Heading>
-      <TextField
-        label="Nombre"
-        value={name}
-        onChangeText={setName}
-        error={nameError}
-        disabled={loading}
-      />
-      <TextField
-        label="Código"
-        value={code}
-        onChangeText={setCode}
-        error={codeError}
-        disabled={loading}
-        placeholder="ABC234"
-      />
-      {message ? <Message tone="error">{message}</Message> : null}
-      <Button
-        label="Unirse"
-        loading={loading}
-        onPress={() => {
-          void submit();
-        }}
-      />
-      <Button
-        label="Inicio"
-        variant="secondary"
-        accessibilityLabel="Volver al inicio"
-        disabled={loading}
-        onPress={() =>
-          navigation.reset({ index: 0, routes: [{ name: homeRoute }] })
-        }
-      />
-    </View>
+    <SafeAreaView style={styles.safe} edges={['bottom']}>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Heading>Unirse</Heading>
+          <TextField
+            label="Nombre"
+            value={name}
+            onChangeText={setName}
+            error={nameError}
+            disabled={loading}
+          />
+          <TextField
+            label="Código"
+            value={code}
+            onChangeText={setCode}
+            error={codeError}
+            disabled={loading}
+            placeholder="ABC234"
+          />
+          {message ? <Message tone="error">{message}</Message> : null}
+          <Button
+            label="Unirse"
+            loading={loading}
+            onPress={() => {
+              void submit();
+            }}
+          />
+          <HomeButton disabled={loading} />
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  safe: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
+  flex: {
+    flex: 1,
+  },
+  content: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    gap: theme.spacing.lg,
+    padding: theme.spacing.xl,
+  },
+});

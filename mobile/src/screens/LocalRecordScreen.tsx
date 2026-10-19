@@ -1,13 +1,18 @@
-import { useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text } from 'react-native';
+import { useRef, useState, type ReactNode } from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '../components/Button';
 import { ContentCard } from '../components/ContentCard';
+import { GesturePicker } from '../components/GesturePicker';
 import { Heading } from '../components/Heading';
 import { HelperText } from '../components/HelperText';
+import { HomeButton } from '../components/HomeButton';
 import { LocalAbandonControl } from '../components/LocalAbandonControl';
 import { LocalRestartControl } from '../components/LocalRestartControl';
 import { Message } from '../components/Message';
+import { SelectableOption } from '../components/SelectableOption';
+import { StatusBadge } from '../components/StatusBadge';
 import {
   commitLocalMatch,
   localMatchSaveError,
@@ -22,6 +27,18 @@ import {
   localVoteRegisteredLabel,
 } from '../features/local/match/copy';
 import { localRecordEntry } from '../features/local/match/recordGate';
+import {
+  recordBackLabel,
+  recordCloseLabel,
+  recordConfirmLabel,
+  recordOpenPlayerLabel,
+  recordPhaseLabel,
+  recordResultsLabel,
+  recordRoundHeading,
+  recordSaveVoteLabel,
+  recordScreenTitle,
+  recordTargetsHeading,
+} from '../features/local/match/recordPresentation';
 import type {
   LocalMatch,
   LocalVoteGesture,
@@ -35,10 +52,11 @@ import {
   saveLocalVote,
 } from '../features/local/rules/vote';
 import { useAppNavigation } from '../hooks/useAppNavigation';
-import { homeRoute } from '../navigation/routes';
+import { useExitToHomeOnBack } from '../hooks/useExitToHomeOnBack';
 import { theme } from '../theme/theme';
 
 export function LocalRecordScreen() {
+  useExitToHomeOnBack();
   const match = readLocalMatch();
   const round = match?.rounds.find((item) => item.status !== 'finished');
   if (!match || match.phase !== 'recording' || round === undefined) {
@@ -57,45 +75,62 @@ function Recorded({
   const [match, setMatch] = useState(initial);
   const [unlocked, setUnlocked] = useState(false);
   if (localRecordEntry(unlocked) === 'cover') {
-    return <RecordCover onContinue={() => setUnlocked(true)} />;
+    return (
+      <RecordCover
+        roundNumber={roundNumber}
+        onContinue={() => setUnlocked(true)}
+      />
+    );
   }
   return (
     <RecordList match={match} roundNumber={roundNumber} onSaved={setMatch} />
   );
 }
 
-function RecordCover({ onContinue }: { onContinue: () => void }) {
-  const navigation = useAppNavigation();
+function RecordShell({ children }: { children: ReactNode }) {
   return (
-    <ScrollView contentContainerStyle={styles.content}>
-      <Heading>Carga</Heading>
+    <SafeAreaView style={styles.safe} edges={['bottom']}>
+      <View style={styles.decorMint} pointerEvents="none" />
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+      >
+        {children}
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+function RecordCover({
+  roundNumber,
+  onContinue,
+}: {
+  roundNumber: number;
+  onContinue: () => void;
+}) {
+  return (
+    <RecordShell>
+      <Heading>{recordScreenTitle}</Heading>
+      <Text style={styles.roundLabel}>{recordRoundHeading(roundNumber)}</Text>
+      <Text style={styles.phaseLabel}>{recordPhaseLabel}</Text>
       <HelperText>{localRecordCoverInstruction}</HelperText>
       <Button label={localRecordContinueLabel} onPress={onContinue} />
       <LocalRestartControl />
       <LocalAbandonControl />
-      <HomeButton
-        onPress={() =>
-          navigation.reset({ index: 0, routes: [{ name: homeRoute }] })
-        }
-      />
-    </ScrollView>
+      <HomeButton />
+    </RecordShell>
   );
 }
 
 function EmptyRecord() {
-  const navigation = useAppNavigation();
   return (
-    <ScrollView contentContainerStyle={styles.content}>
-      <Heading>Carga</Heading>
+    <RecordShell>
+      <Heading>{recordScreenTitle}</Heading>
       <HelperText>Todavía no hay una ronda para anotar.</HelperText>
       <LocalRestartControl />
       <LocalAbandonControl />
-      <HomeButton
-        onPress={() =>
-          navigation.reset({ index: 0, routes: [{ name: homeRoute }] })
-        }
-      />
-    </ScrollView>
+      <HomeButton />
+    </RecordShell>
   );
 }
 
@@ -118,6 +153,7 @@ function RecordList({
   const closed =
     match.rounds.find((round) => round.number === roundNumber)?.status ===
     'voting';
+  const allRegistered = rows.every((row) => row.registered);
 
   if (!closed && playerId !== null) {
     return (
@@ -205,8 +241,9 @@ function RecordList({
 
   if (!closed && askingClose) {
     return (
-      <ScrollView contentContainerStyle={styles.content}>
-        <Heading>Cerrar</Heading>
+      <RecordShell>
+        <Heading>{recordCloseLabel}</Heading>
+        <Text style={styles.roundLabel}>{recordRoundHeading(roundNumber)}</Text>
         <HelperText>{localVoteCloseInstruction}</HelperText>
         {rows.map((row) => (
           <ContentCard key={row.playerId}>
@@ -216,35 +253,44 @@ function RecordList({
         ))}
         {confirmError ? <Message tone="error">{confirmError}</Message> : null}
         <Button
-          label="Cerrar"
+          label={recordCloseLabel}
           onPress={closeVote}
           disabled={busy}
           loading={busy}
         />
         <Button
-          label="Volver"
+          label={recordBackLabel}
           variant="secondary"
           onPress={() => setAskingClose(false)}
           disabled={busy}
         />
-      </ScrollView>
+      </RecordShell>
     );
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.content}>
-      <Heading>Carga</Heading>
+    <RecordShell>
+      <Heading>{recordScreenTitle}</Heading>
+      <Text style={styles.roundLabel}>{recordRoundHeading(roundNumber)}</Text>
+      <Text style={styles.phaseLabel}>{recordPhaseLabel}</Text>
       <HelperText>{localRecordListInstruction}</HelperText>
       {rows.map((row) => (
         <ContentCard key={row.playerId}>
-          <Text style={styles.name}>{row.name}</Text>
-          <HelperText>
-            {row.registered ? localVoteRegisteredLabel : localVoteMissingLabel}
-          </HelperText>
+          <View style={styles.rowHeader}>
+            <Text style={styles.name}>{row.name}</Text>
+            <StatusBadge
+              label={
+                row.registered
+                  ? localVoteRegisteredLabel
+                  : localVoteMissingLabel
+              }
+              tone={row.registered ? 'success' : 'warning'}
+            />
+          </View>
           {row.action ? <HelperText>{row.action}</HelperText> : null}
           {closed ? null : (
             <Button
-              label="Abrir"
+              label={recordOpenPlayerLabel}
               variant="secondary"
               onPress={() => setPlayerId(row.playerId)}
             />
@@ -254,22 +300,22 @@ function RecordList({
       {confirmError ? <Message tone="error">{confirmError}</Message> : null}
       {closed ? (
         <Button
-          label="Resultados"
+          label={recordResultsLabel}
           onPress={showResults}
           disabled={busy}
           loading={busy}
         />
       ) : (
-        <Button label="Confirmar" onPress={confirm} disabled={busy} />
+        <Button
+          label={recordConfirmLabel}
+          onPress={confirm}
+          disabled={busy || !allRegistered}
+        />
       )}
       <LocalRestartControl />
       <LocalAbandonControl />
-      <HomeButton
-        onPress={() =>
-          navigation.reset({ index: 0, routes: [{ name: homeRoute }] })
-        }
-      />
-    </ScrollView>
+      <HomeButton />
+    </RecordShell>
   );
 }
 
@@ -336,73 +382,98 @@ function VoteForm({
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.content}>
+    <RecordShell>
       <Heading>{form.playerName}</Heading>
-      <Button
-        label="Señalar"
-        variant={gesture === 'point' ? 'primary' : 'secondary'}
-        onPress={() => setGesture('point')}
+      <HelperText>{localRecordListInstruction}</HelperText>
+      <GesturePicker
+        value={gesture}
+        onChange={(next) => {
+          setGesture(next);
+          if (next !== 'point') {
+            setTargets([]);
+          }
+        }}
         disabled={saving}
       />
-      <Button
-        label="Puño"
-        variant={gesture === 'fist' ? 'primary' : 'secondary'}
-        onPress={() => setGesture('fist')}
-        disabled={saving}
-      />
-      <Button
-        label="V"
-        variant={gesture === 'v' ? 'primary' : 'secondary'}
-        onPress={() => setGesture('v')}
-        disabled={saving}
-      />
-      {gesture === 'point'
-        ? form.others.map((other) => (
-            <Button
+      {gesture === 'point' ? (
+        <>
+          <Text style={styles.targetsHeading}>{recordTargetsHeading}</Text>
+          {form.others.map((other) => (
+            <SelectableOption
               key={other.id}
               label={other.name}
-              variant={targets.includes(other.id) ? 'primary' : 'secondary'}
+              selected={targets.includes(other.id)}
               onPress={() => toggle(other.id)}
               disabled={saving}
             />
-          ))
-        : null}
+          ))}
+        </>
+      ) : null}
       {error ? <Message tone="error">{error}</Message> : null}
       <Button
-        label="Guardar"
+        label={recordSaveVoteLabel}
         onPress={save}
         disabled={saving || gesture === null}
         loading={saving}
       />
       <Button
-        label="Volver"
+        label={recordBackLabel}
         variant="secondary"
         onPress={onClose}
         disabled={saving}
       />
-    </ScrollView>
-  );
-}
-
-function HomeButton({ onPress }: { onPress: () => void }) {
-  return (
-    <Button
-      label="Inicio"
-      variant="secondary"
-      accessibilityLabel="Volver al inicio"
-      onPress={onPress}
-    />
+    </RecordShell>
   );
 }
 
 const styles = StyleSheet.create({
+  safe: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
+  decorMint: {
+    position: 'absolute',
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: theme.brand.mint,
+    opacity: 0.1,
+    top: -70,
+    right: -60,
+  },
   content: {
+    flexGrow: 1,
     gap: theme.spacing.lg,
     padding: theme.spacing.xl,
-    backgroundColor: theme.colors.background,
+    paddingBottom: theme.spacing.xxl,
+  },
+  roundLabel: {
+    ...theme.typography.label,
+    color: theme.colors.primary,
+    textAlign: 'center',
+  },
+  phaseLabel: {
+    ...theme.typography.heading,
+    fontSize: 22,
+    lineHeight: 28,
+    color: theme.colors.text,
+    textAlign: 'center',
   },
   name: {
     ...theme.typography.body,
+    fontWeight: '600',
     color: theme.colors.text,
+    flexShrink: 1,
+  },
+  rowHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: theme.spacing.md,
+  },
+  targetsHeading: {
+    ...theme.typography.label,
+    color: theme.colors.text,
+    textAlign: 'center',
   },
 });

@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
-import { AppState, ScrollView, StyleSheet, Text } from 'react-native';
+import { AppState, StyleSheet, Text } from 'react-native';
 
 import { Button } from '../components/Button';
-import { ContentCard } from '../components/ContentCard';
-import { Heading } from '../components/Heading';
-import { HelperText } from '../components/HelperText';
+import { HomeButton } from '../components/HomeButton';
 import { LocalAbandonControl } from '../components/LocalAbandonControl';
 import { LocalRestartControl } from '../components/LocalRestartControl';
 import { Message } from '../components/Message';
+import { PrivateDealFrame } from '../components/PrivateDealFrame';
+import { SituationCard } from '../components/SituationCard';
+import { useExitToHomeOnBack } from '../hooks/useExitToHomeOnBack';
 import {
   commitLocalMatch,
   localMatchSaveError,
@@ -33,10 +34,10 @@ import {
 } from '../features/local/match/viewing';
 import type { LocalMatch } from '../features/local/rules/round';
 import { useAppNavigation } from '../hooks/useAppNavigation';
-import { homeRoute } from '../navigation/routes';
 import { theme } from '../theme/theme';
 
 export function LocalCardScreen() {
+  useExitToHomeOnBack();
   const match = readLocalMatch();
   const dealt = match?.rounds.some(
     (round) => round.status !== 'finished' && round.hands.length > 0,
@@ -48,21 +49,16 @@ export function LocalCardScreen() {
 }
 
 function EmptyCard({ savedList }: { savedList: boolean }) {
-  const navigation = useAppNavigation();
   return (
-    <ScrollView contentContainerStyle={styles.content}>
-      <Heading>Carta</Heading>
-      <HelperText>
+    <PrivateDealFrame>
+      <Text style={styles.title}>Carta</Text>
+      <Text style={styles.helperOnNavy}>
         {savedList ? localEmptyCardInstruction : localMissingCardInstruction}
-      </HelperText>
+      </Text>
       <LocalRestartControl />
       <LocalAbandonControl />
-      <HomeButton
-        onPress={() =>
-          navigation.reset({ index: 0, routes: [{ name: homeRoute }] })
-        }
-      />
-    </ScrollView>
+      <HomeButton />
+    </PrivateDealFrame>
   );
 }
 
@@ -108,53 +104,61 @@ function LocalPass({ match }: { match: LocalMatch }) {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.content}>
-      <Heading>{view.kind === 'complete' ? 'Carta' : view.playerName}</Heading>
+    <PrivateDealFrame>
       {view.kind === 'covered' ? (
         <>
-          <HelperText>{localTurnLabel(view.playerName)}</HelperText>
-          <HelperText>
+          <Text accessibilityRole="header" style={styles.playerName}>
+            {view.playerName}
+          </Text>
+          <Text style={styles.turnLabel}>{localTurnLabel(view.playerName)}</Text>
+          <Text style={styles.helperOnNavy}>
             {localCoveredCardInstruction(view.playerName)}
-          </HelperText>
+          </Text>
+          <Button
+            label="Ver carta"
+            onPress={() => setPass(revealLocalCard(pass))}
+          />
         </>
       ) : null}
-      {view.kind === 'visible' ? <VisibleCard view={view} /> : null}
+
       {view.kind === 'visible' ? (
-        <HelperText>{localVisibleCardInstruction}</HelperText>
+        <>
+          <Text accessibilityRole="header" style={styles.playerName}>
+            {view.playerName}
+          </Text>
+          <VisibleCard view={view} />
+          <Text style={styles.helperOnNavy}>{localVisibleCardInstruction}</Text>
+          <Button
+            label={localHideCardLabel}
+            variant="accent"
+            accessibilityLabel={localVisibleCardInstruction}
+            onPress={() => setPass(hideLocalCard(pass, match.players.length))}
+          />
+        </>
       ) : null}
+
       {view.kind === 'complete' ? (
-        <HelperText>{localCompleteCardInstruction}</HelperText>
+        <>
+          <Text accessibilityRole="header" style={styles.title}>
+            Listo
+          </Text>
+          <Text style={styles.helperOnNavy}>
+            {localCompleteCardInstruction}
+          </Text>
+          <Button
+            label="Continuar"
+            onPress={continueDeal}
+            disabled={saving}
+            loading={saving}
+          />
+        </>
       ) : null}
+
       {saveError ? <Message tone="error">{saveError}</Message> : null}
-      {view.kind === 'complete' ? (
-        <Button
-          label="Continuar"
-          onPress={continueDeal}
-          disabled={saving}
-          loading={saving}
-        />
-      ) : null}
-      {view.kind === 'covered' ? (
-        <Button
-          label="Ver carta"
-          onPress={() => setPass(revealLocalCard(pass))}
-        />
-      ) : null}
-      {view.kind === 'visible' ? (
-        <Button
-          label={localHideCardLabel}
-          accessibilityLabel={localVisibleCardInstruction}
-          onPress={() => setPass(hideLocalCard(pass, match.players.length))}
-        />
-      ) : null}
       <LocalRestartControl />
       <LocalAbandonControl />
-      <HomeButton
-        onPress={() =>
-          navigation.reset({ index: 0, routes: [{ name: homeRoute }] })
-        }
-      />
-    </ScrollView>
+      <HomeButton />
+    </PrivateDealFrame>
   );
 }
 
@@ -163,39 +167,31 @@ function VisibleCard({
 }: {
   view: Extract<LocalCardView, { kind: 'visible' }>;
 }) {
-  return (
-    <ContentCard>
-      <Text style={styles.number}>{`#${view.number}`}</Text>
-      {view.text === undefined ? null : (
-        <Text style={styles.text}>{view.text}</Text>
-      )}
-    </ContentCard>
-  );
-}
-
-function HomeButton({ onPress }: { onPress: () => void }) {
-  return (
-    <Button
-      label="Inicio"
-      variant="secondary"
-      accessibilityLabel="Volver al inicio"
-      onPress={onPress}
-    />
-  );
+  return <SituationCard number={view.number} text={view.text} />;
 }
 
 const styles = StyleSheet.create({
-  content: {
-    gap: theme.spacing.lg,
-    padding: theme.spacing.xl,
-    backgroundColor: theme.colors.background,
-  },
-  number: {
+  title: {
     ...theme.typography.heading,
-    color: theme.colors.text,
+    color: theme.brand.cream,
+    textAlign: 'center',
   },
-  text: {
-    ...theme.typography.body,
-    color: theme.colors.text,
+  playerName: {
+    ...theme.typography.heading,
+    fontSize: 34,
+    lineHeight: 40,
+    color: theme.brand.cream,
+    textAlign: 'center',
+  },
+  turnLabel: {
+    ...theme.typography.label,
+    color: theme.brand.mint,
+    textAlign: 'center',
+  },
+  helperOnNavy: {
+    ...theme.typography.helper,
+    color: theme.brand.cream,
+    opacity: 0.9,
+    textAlign: 'center',
   },
 });

@@ -1,27 +1,39 @@
 import { useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '../components/Button';
-import { ContentCard } from '../components/ContentCard';
+import { HomeButton } from '../components/HomeButton';
+import { DashedButton } from '../components/DashedButton';
 import { EmptyState } from '../components/EmptyState';
 import { Heading } from '../components/Heading';
 import { HelperText } from '../components/HelperText';
 import { LocalAbandonControl } from '../components/LocalAbandonControl';
 import { Message } from '../components/Message';
+import { PlayerRosterRow } from '../components/PlayerRosterRow';
 import { TextField } from '../components/TextField';
-import { dealLocalMatch } from '../features/local/catalog/deal';
-import { deviceRng } from '../features/local/catalog/rng';
-import { localCatalogSituations } from '../features/local/catalog/situations';
 import {
   commitLocalMatch,
   localMatchSaveError,
 } from '../features/local/match/autosave';
 import { localSetupInstruction } from '../features/local/match/copy';
+import {
+  addPlayerLabel,
+  continueSetupLabel,
+  playerDisplayIndex,
+  playersLimitsHelper,
+  playersScreenTitle,
+  savePlayerLabel,
+} from '../features/local/match/setupPresentation';
 import { readLocalMatch } from '../features/local/match/viewing';
 import {
   addPlayer,
-  cancelSetupReview,
-  confirmPendingSetup,
   createSetupMatch,
   localPlayerCountText,
   localRosterMutable,
@@ -30,15 +42,12 @@ import {
   openSetupReview,
   removePlayer,
   renamePlayer,
-  returnToEdit,
   startedLocalRosterMessage,
   tooFewLocalPlayersMessage,
   type LocalPlayer,
   type LocalSetupMatch,
 } from '../features/local/match/setup';
 import { useAppNavigation } from '../hooks/useAppNavigation';
-import { homeRoute } from '../navigation/routes';
-import { createSingleFlight } from '../services/api/singleFlight';
 import { theme } from '../theme/theme';
 
 function rosterHeldIsLocked(): boolean {
@@ -71,14 +80,13 @@ export function LocalSetupScreen() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState<string | undefined>();
   const [continueError, setContinueError] = useState<string | undefined>();
-  const [reviewing, setReviewing] = useState(false);
   const editing = editingId !== null;
-  const continueLock = useRef(createSingleFlight());
-  const accepted = useRef(false);
   const saving = useRef(false);
-  const [pending, setPending] = useState<'add' | 'confirm' | null>(null);
+  const [pending, setPending] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
-  const busy = pending !== null || removingId !== null;
+  const busy = pending || removingId !== null;
+  const locked = rosterHeldIsLocked();
+  const canEditRoster = !locked;
 
   function submit() {
     if (saving.current) {
@@ -96,10 +104,10 @@ export function LocalSetupScreen() {
       return;
     }
     saving.current = true;
-    setPending('add');
+    setPending(true);
     void commitLocalMatch(result.match).then((saved) => {
       saving.current = false;
-      setPending(null);
+      setPending(false);
       if (!saved.ok) {
         setError(localMatchSaveError);
         return;
@@ -112,74 +120,14 @@ export function LocalSetupScreen() {
     });
   }
 
-  function reviewList() {
+  function goToMatchConfig() {
     const result = openSetupReview(match);
     if (!result.reviewing) {
       setContinueError(result.message);
       return;
     }
     setContinueError(undefined);
-    setReviewing(true);
-  }
-
-  function leaveReview() {
-    accepted.current = false;
-    setMatch(returnToEdit(match));
-    setReviewing(false);
-    setContinueError(undefined);
-  }
-
-  function cancelReview() {
-    accepted.current = false;
-    setMatch(cancelSetupReview(match));
-    setReviewing(false);
-    setContinueError(undefined);
-  }
-
-  function confirmReview() {
-    if (rosterHeldIsLocked()) {
-      setContinueError(startedLocalRosterMessage);
-      return;
-    }
-    const result = confirmPendingSetup(match, accepted.current);
-    if (!result.entered) {
-      return;
-    }
-    accepted.current = true;
-    if (!result.ok) {
-      accepted.current = false;
-      setContinueError(result.message);
-      return;
-    }
-    if (saving.current) {
-      return;
-    }
-    saving.current = true;
-    setPending('confirm');
-    void continueLock.current(async () => {
-      const dealt = dealLocalMatch(
-        result.match,
-        localCatalogSituations(),
-        deviceRng(),
-      );
-      if (!dealt.ok) {
-        saving.current = false;
-        accepted.current = false;
-        setPending(null);
-        setContinueError(dealt.message);
-        return;
-      }
-      const saved = await commitLocalMatch(dealt.match);
-      saving.current = false;
-      setPending(null);
-      if (!saved.ok) {
-        accepted.current = false;
-        setContinueError(localMatchSaveError);
-        return;
-      }
-      setContinueError(undefined);
-      navigation.reset({ index: 0, routes: [{ name: 'LocalCard' }] });
-    });
+    navigation.navigate('LocalMatchConfig');
   }
 
   function startEdit(player: LocalPlayer) {
@@ -228,132 +176,123 @@ export function LocalSetupScreen() {
   }
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.content}
-      keyboardShouldPersistTaps="handled"
-    >
-      <Heading>Nombres</Heading>
-      <HelperText>{localSetupInstruction}</HelperText>
-      <HelperText>{localPlayerCountText(match.players.length)}</HelperText>
-      {reviewing ? (
-        <>
-          {match.players.map((player) => (
-            <ContentCard key={player.id}>
-              <Text style={styles.name}>{player.name}</Text>
-            </ContentCard>
-          ))}
-          {continueError ? (
-            <Message tone="error">{continueError}</Message>
+    <SafeAreaView style={styles.safe} edges={['bottom']}>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Heading>{playersScreenTitle}</Heading>
+          <HelperText>{playersLimitsHelper}</HelperText>
+          <HelperText>{localSetupInstruction}</HelperText>
+          <HelperText>{localPlayerCountText(match.players.length)}</HelperText>
+
+          {locked ? (
+            <Message tone="warning">{startedLocalRosterMessage}</Message>
           ) : null}
-          <Button
-            label="Confirmar"
-            onPress={confirmReview}
-            disabled={busy}
-            loading={pending === 'confirm'}
-          />
-          <Button
-            label="Volver"
-            variant="secondary"
-            onPress={leaveReview}
-            disabled={busy}
-          />
-          <Button
-            label="Cancelar"
-            variant="secondary"
-            onPress={cancelReview}
-            disabled={busy}
-          />
-        </>
-      ) : (
-        <>
+
           {match.players.length === 0 ? (
             <EmptyState
               title="Sin jugadores"
               message="Todavía no hay nombres."
             />
           ) : null}
-          {match.players.length < minLocalPlayers ? (
-            <Message tone="warning">{tooFewLocalPlayersMessage}</Message>
-          ) : null}
-          <TextField
-            label="Nombre"
-            value={draft}
-            onChangeText={setDraft}
-            error={error}
-            autoCapitalize="words"
-            autoCorrect={false}
-            returnKeyType="done"
-            blurOnSubmit
-            onSubmitEditing={submit}
-            disabled={busy}
-          />
-          <Button
-            label={editing ? 'Guardar' : 'Agregar'}
-            onPress={submit}
-            disabled={
-              busy || (!editing && match.players.length >= maxLocalPlayers)
-            }
-            loading={pending === 'add'}
-          />
-          {editing ? (
-            <Button
-              label="Cancelar"
-              variant="secondary"
-              onPress={cancelEdit}
-              disabled={busy}
-            />
-          ) : null}
+
           {match.players.map((player) => (
-            <ContentCard key={player.id}>
-              <Text style={styles.name}>{player.name}</Text>
-              <View style={styles.actions}>
-                <Button
-                  label="Editar"
-                  variant="secondary"
-                  onPress={() => startEdit(player)}
-                  disabled={busy}
+            <PlayerRosterRow
+              key={player.id}
+              index={playerDisplayIndex(match.players, player.id)}
+              name={player.name}
+              editable={canEditRoster}
+              disabled={busy}
+              removing={removingId === player.id}
+              onEdit={() => startEdit(player)}
+              onRemove={() => remove(player.id)}
+            />
+          ))}
+
+          {canEditRoster ? (
+            <>
+              {match.players.length < minLocalPlayers ? (
+                <Message tone="warning">{tooFewLocalPlayersMessage}</Message>
+              ) : null}
+              <TextField
+                label="Nombre"
+                value={draft}
+                onChangeText={setDraft}
+                error={error}
+                autoCapitalize="words"
+                autoCorrect={false}
+                returnKeyType="done"
+                blurOnSubmit
+                onSubmitEditing={submit}
+                disabled={busy}
+              />
+              {editing ? (
+                <>
+                  <Button
+                    label={savePlayerLabel}
+                    onPress={submit}
+                    disabled={busy}
+                    loading={pending}
+                  />
+                  <Button
+                    label="Cancelar"
+                    variant="secondary"
+                    onPress={cancelEdit}
+                    disabled={busy}
+                  />
+                </>
+              ) : (
+                <DashedButton
+                  label={addPlayerLabel}
+                  onPress={submit}
+                  disabled={busy || match.players.length >= maxLocalPlayers}
+                  loading={pending}
                 />
+              )}
+              {continueError ? (
+                <Message tone="error">{continueError}</Message>
+              ) : null}
+              <View style={styles.footer}>
                 <Button
-                  label="Quitar"
-                  variant="destructive"
-                  onPress={() => remove(player.id)}
-                  disabled={busy}
-                  loading={removingId === player.id}
+                  label={continueSetupLabel}
+                  onPress={goToMatchConfig}
+                  disabled={busy || match.players.length < minLocalPlayers}
                 />
               </View>
-            </ContentCard>
-          ))}
-          {continueError ? (
-            <Message tone="error">{continueError}</Message>
+            </>
           ) : null}
-          <Button label="Revisar" onPress={reviewList} disabled={busy} />
-        </>
-      )}
-      <LocalAbandonControl />
-      <Button
-        label="Inicio"
-        variant="secondary"
-        accessibilityLabel="Volver al inicio"
-        onPress={() =>
-          navigation.reset({ index: 0, routes: [{ name: homeRoute }] })
-        }
-      />
-    </ScrollView>
+
+          <LocalAbandonControl />
+          <HomeButton />
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  content: {
-    gap: theme.spacing.lg,
-    padding: theme.spacing.xl,
+  safe: {
+    flex: 1,
     backgroundColor: theme.colors.background,
   },
-  name: {
-    ...theme.typography.body,
-    color: theme.colors.text,
+  flex: {
+    flex: 1,
   },
-  actions: {
+  content: {
+    flexGrow: 1,
+    gap: theme.spacing.lg,
+    padding: theme.spacing.xl,
+    paddingBottom: theme.spacing.xxl,
+    backgroundColor: theme.colors.background,
+  },
+  footer: {
     alignSelf: 'stretch',
-    gap: theme.spacing.sm,
+    marginTop: theme.spacing.sm,
+    gap: theme.spacing.md,
   },
 });

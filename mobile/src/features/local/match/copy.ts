@@ -46,6 +46,8 @@ export const localMatchTotalLabel = 'Total de la partida';
 
 export const localStandingsLabel = 'Clasificación';
 
+export const localTeamsLabel = 'Equipos';
+
 export const localTeamRoleLabel = 'Equipo';
 
 export const localImpostorRoleLabel = 'Impostor';

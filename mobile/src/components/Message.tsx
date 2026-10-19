@@ -28,6 +28,8 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     borderRadius: theme.radii.card,
     padding: theme.spacing.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   text: {
     ...theme.typography.body,

@@ -187,6 +187,8 @@ describe('flujo de la partida', () => {
     const session = await loadGuestSession(storage);
     const routes: RootStackParamList = {
       Home: undefined,
+      ModeSelect: undefined,
+      OnlineEntry: undefined,
       CreateRoom: undefined,
       JoinRoom: undefined,
       Lobby: undefined,
@@ -197,6 +199,7 @@ describe('flujo de la partida', () => {
       Scoreboard: undefined,
       Catalog: undefined,
       LocalSetup: undefined,
+      LocalMatchConfig: undefined,
       LocalCard: undefined,
       LocalTable: undefined,
       LocalRecord: undefined,

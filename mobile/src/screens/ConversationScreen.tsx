@@ -7,12 +7,12 @@ import {
   useRoomEvents,
 } from '../app/RoomConnectionProvider';
 import { Button } from '../components/Button';
+import { HomeButton } from '../components/HomeButton';
 import { Heading } from '../components/Heading';
 import { HelperText } from '../components/HelperText';
 import { Message } from '../components/Message';
 import { screenStyles } from '../components/screenStyles';
 import { useAppNavigation } from '../hooks/useAppNavigation';
-import { homeRoute } from '../navigation/routes';
 import {
   fetchConversationRound,
   networkMessage,
@@ -239,14 +239,7 @@ export function ConversationScreen() {
           void send(bastaLock.current, bastaCommand, setCalling);
         }}
       />
-      <Button
-        label="Inicio"
-        variant="secondary"
-        accessibilityLabel="Volver al inicio"
-        onPress={() =>
-          navigation.reset({ index: 0, routes: [{ name: homeRoute }] })
-        }
-      />
+      <HomeButton />
     </View>
   );
 }

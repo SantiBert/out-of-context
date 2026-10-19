@@ -26,6 +26,8 @@ const styles = StyleSheet.create({
     padding: theme.spacing.xl,
     borderRadius: theme.radii.card,
     backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   title: {
     ...theme.typography.label,

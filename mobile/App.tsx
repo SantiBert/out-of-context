@@ -4,8 +4,15 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { GuestSessionProvider } from './src/app/GuestSessionProvider';
 import { RoomConnectionProvider } from './src/app/RoomConnectionProvider';
+import { useAppFonts } from './src/theme/fonts';
 
 export default function App() {
+  const fontsLoaded = useAppFonts();
+
+  if (!fontsLoaded) {
+    return null;
+  }
+
   return (
     <SafeAreaProvider>
       <GuestSessionProvider>
@@ -13,7 +20,7 @@ export default function App() {
           <AppNavigator />
         </RoomConnectionProvider>
       </GuestSessionProvider>
-      <StatusBar style="auto" />
+      <StatusBar style="dark" />
     </SafeAreaProvider>
   );
 }
