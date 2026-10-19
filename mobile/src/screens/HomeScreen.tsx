@@ -1,11 +1,17 @@
 import { useEffect, useState } from 'react';
-import { Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Image,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { BrandLogo } from '../components/BrandLogo';
-import { BrandMark } from '../components/BrandMark';
 import { Button } from '../components/Button';
-import { HelperText } from '../components/HelperText';
+import { HomeCtaButton } from '../components/HomeCtaButton';
 import { Message } from '../components/Message';
 import {
   homeCatalogLabel,
@@ -29,6 +35,7 @@ import {
 } from '../features/local/match/resume';
 import { readLocalMatch } from '../features/local/match/viewing';
 import { useAppNavigation } from '../hooks/useAppNavigation';
+import { getHomeAsset } from '../theme/homeAssets';
 import { theme } from '../theme/theme';
 
 export const appTitle = 'Out Of Context';
@@ -45,10 +52,25 @@ export {
   homePlayLabel,
 };
 
+const homeLogo = getHomeAsset('homeLogo');
+const homePeople = getHomeAsset('homePeople');
+const homeBackground = getHomeAsset('homeBackground');
+const homePlayIcon = getHomeAsset('homePlayIcon');
+const homeBookIcon = getHomeAsset('homeBookIcon');
+
+/** Dimensiones nativas de `assets/brand/inicio/*.png`. */
+const LOGO_ASPECT = 628 / 428;
+const BACKGROUND_ASPECT = 668 / 512;
+
+const CONTENT_MAX_WIDTH = 360;
+const COMPACT_WINDOW_HEIGHT = 640;
+
 export function HomeScreen() {
   const navigation = useAppNavigation();
+  const { height: windowHeight } = useWindowDimensions();
   const [recovery, setRecovery] = useState<LocalRecovery | null>(null);
   const [howToPlayOpen, setHowToPlayOpen] = useState(false);
+  const [layoutHeight, setLayoutHeight] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -65,24 +87,68 @@ export function HomeScreen() {
   const match = readLocalMatch();
   const continueEnabled = canContinueLocal(match, recovery);
   const showContinue = match !== null && recovery?.status !== 'unavailable';
+  const usefulHeight = layoutHeight > 0 ? layoutHeight : windowHeight;
+  const logoMaxHeight = usefulHeight * 0.24;
+  const useScrollFallback = windowHeight < COMPACT_WINDOW_HEIGHT;
 
-  return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <View style={styles.decorMintLarge} pointerEvents="none" />
-      <View style={styles.decorMintSmall} pointerEvents="none" />
-      <ScrollView
-        contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled"
-      >
-        <BrandLogo size="lg" variant="light" />
-        <BrandMark size="md" variant="light" />
-        <HelperText>{appTitle}</HelperText>
+  const body = (
+    <View
+      style={styles.body}
+      onLayout={(event) => {
+        setLayoutHeight(event.nativeEvent.layout.height);
+      }}
+    >
+      <View style={styles.header}>
+        {homeLogo.source !== null ? (
+          <Image
+            source={homeLogo.source}
+            accessibilityRole="image"
+            accessibilityLabel={appTitle}
+            resizeMode="contain"
+            style={[styles.logo, { maxHeight: logoMaxHeight }]}
+          />
+        ) : null}
+      </View>
 
-        <Button
-          label={homePlayLabel}
-          variant="accent"
-          onPress={() => navigation.navigate(homePlayRoute)}
-        />
+      <View style={styles.hero}>
+        {homeBackground.source !== null ? (
+          <Image
+            source={homeBackground.source}
+            accessibilityElementsHidden
+            importantForAccessibility="no"
+            resizeMode="contain"
+            style={styles.backgroundArt}
+          />
+        ) : null}
+        {homePeople.source !== null ? (
+          <Image
+            source={homePeople.source}
+            accessibilityRole="image"
+            accessibilityLabel="Jugadores de Out Of Context"
+            resizeMode="contain"
+            style={styles.people}
+          />
+        ) : null}
+      </View>
+
+      <View style={styles.actions}>
+        {homePlayIcon.source !== null ? (
+          <HomeCtaButton
+            label={homePlayLabel}
+            variant="accent"
+            iconSource={homePlayIcon.source}
+            onPress={() => navigation.navigate(homePlayRoute)}
+          />
+        ) : null}
+
+        {homeBookIcon.source !== null ? (
+          <HomeCtaButton
+            label={homeHowToPlayLabel}
+            variant="secondary"
+            iconSource={homeBookIcon.source}
+            onPress={() => setHowToPlayOpen(true)}
+          />
+        ) : null}
 
         {showContinue ? (
           <Button
@@ -99,22 +165,34 @@ export function HomeScreen() {
           />
         ) : null}
 
-        <Button
-          label={homeHowToPlayLabel}
-          variant="secondary"
-          onPress={() => setHowToPlayOpen(true)}
-        />
-
         {recovery?.status === 'unavailable' ? (
           <Message tone="error">{localMatchResumeError}</Message>
         ) : null}
 
-        <Button
-          label={homeCatalogLabel}
-          variant="secondary"
-          onPress={() => navigation.navigate('Catalog')}
-        />
-      </ScrollView>
+        {__DEV__ ? (
+          <Button
+            label={homeCatalogLabel}
+            variant="secondary"
+            onPress={() => navigation.navigate('Catalog')}
+          />
+        ) : null}
+      </View>
+    </View>
+  );
+
+  return (
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      {useScrollFallback ? (
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          bounces={false}
+        >
+          {body}
+        </ScrollView>
+      ) : (
+        body
+      )}
 
       <Modal
         visible={howToPlayOpen}
@@ -148,33 +226,51 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
-  decorMintLarge: {
-    position: 'absolute',
-    width: 220,
-    height: 220,
-    borderRadius: 110,
-    backgroundColor: theme.brand.mint,
-    opacity: 0.12,
-    top: -40,
-    right: -60,
-  },
-  decorMintSmall: {
-    position: 'absolute',
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    backgroundColor: theme.brand.mint,
-    opacity: 0.1,
-    bottom: 80,
-    left: -40,
-  },
-  content: {
+  scrollContent: {
     flexGrow: 1,
+  },
+  body: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: theme.spacing.xl,
+    paddingTop: theme.spacing.sm,
+    paddingBottom: theme.spacing.md,
+  },
+  header: {
+    width: '100%',
+    maxWidth: CONTENT_MAX_WIDTH,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+  },
+  logo: {
+    width: '100%',
+    aspectRatio: LOGO_ASPECT,
+  },
+  hero: {
+    flex: 1,
+    minHeight: 0,
+    width: '100%',
+    maxWidth: CONTENT_MAX_WIDTH,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: theme.spacing.lg,
-    paddingHorizontal: theme.spacing.xl,
-    paddingVertical: theme.spacing.xxl,
+    marginTop: -theme.spacing.md,
+  },
+  backgroundArt: {
+    position: 'absolute',
+    width: '108%',
+    aspectRatio: BACKGROUND_ASPECT,
+    opacity: 0.95,
+  },
+  people: {
+    width: '100%',
+    height: '100%',
+    zIndex: 1,
+  },
+  actions: {
+    width: '100%',
+    maxWidth: CONTENT_MAX_WIDTH,
+    gap: theme.spacing.md,
+    paddingTop: theme.spacing.sm,
   },
   modalBackdrop: {
     flex: 1,

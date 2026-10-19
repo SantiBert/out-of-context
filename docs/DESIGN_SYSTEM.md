@@ -92,6 +92,7 @@
 | `PrivateDealFrame` | Layout navy del reparto privado (OOC-020.8) |
 | `SituationCard` | Carta de situación (número + texto; sin rol) |
 | `HomeButton` | Inicio unificado (reset Home; a11y «Volver al inicio»); OOC-020.11 |
+| `HomeCtaButton` | CTA de Home con icono leading + chevron (`accent` \| `secondary`); assets en `homeAssets` |
 | `ResultPlayerCard` / `StandingRow` | Filas de resultados y clasificación; OOC-020.10 |
 | `GesturePicker` | Selección Señalar / Puño / V; OOC-020.9 |
 
@@ -122,4 +123,4 @@ Mint y coral son acentos (badges, puntos de ronda, error), no tipografía de lec
 
 ## Fuera de este documento
 
-Flujo online UI visual: OOC-020.13. Assets cartoon pendientes en `BRAND_ASSETS.md`. Informe de cierre: `OOC-020_INTEGRATION_REPORT.md`.
+Flujo online UI visual: OOC-020.13. Assets de Home en `homeAssets` / `BRAND_ASSETS.md`; slots globales de marca siguen pendientes. Informe de cierre: `OOC-020_INTEGRATION_REPORT.md`.

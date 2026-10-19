@@ -13,10 +13,11 @@
 | `mobile/assets/android-icon-*.png` | Plantilla Expo | Placeholder adaptive |
 | `mobile/assets/favicon.png` | Plantilla Expo | Placeholder web |
 | `mobile/assets/fonts/Baloo2-*.ttf` + `OFL.txt` | Google Fonts / OFL | Listo (OOC-020.2) |
-| `mobile/assets/brand/*` | — | **No existe**; slots documentados abajo |
+| `mobile/assets/brand/*` | — | Slots globales aún missing (abajo) |
+| `mobile/assets/brand/inicio/*` | Arte Home | **Listo** (logo, people, background, iconos CTA) |
 
-No hay logo horizontal, mark ni splash de marca originales en el repositorio.  
-**Bloqueo:** la entrega de PNG/SVG finales depende del propietario / diseño aprobado. No se inventan recursos finales ni se copian mockups o arte de terceros.
+Slots globales (logo horizontal dual, mark, splash, app icon) siguen pendientes.  
+Home usa el registro `homeAssets.ts` con PNG en `assets/brand/inicio/`. No se usan mockups de `docs/art/` ni PNG de botones completos como UI.
 
 ## 2. Requisitos técnicos
 
@@ -61,10 +62,22 @@ No hay logo horizontal, mark ni splash de marca originales en el repositorio.
 
 Cuando un archivo aprobado se añada al repo: colocar el PNG, añadir `require(...)` en `brandAssets.ts` y pasar `status` a `ready`. Metro no debe `require` paths inexistentes.
 
-## 4. Puente actual (sin arte final)
+### Assets de Home (`assets/brand/inicio/` → `homeAssets.ts`)
 
-- **Wordmark tipográfico** “OUT OF CONTEXT” con Baloo 2 + tokens de color (`BrandLogo`).
-- **BrandMark** provisional: forma nativa mint/cream + letra “O” (no es el ícono final).
+| Clave | Path | Status | Uso |
+|---|---|---|---|
+| `homeLogo` | `assets/brand/inicio/logo.png` | **ready** | Logo sticker en Home |
+| `homePeople` | `assets/brand/inicio/people.png` | **ready** | Hero de personajes |
+| `homeBackground` | `assets/brand/inicio/background.png` | **ready** | Decoración (no pantalla completa) |
+| `homePlayIcon` | `assets/brand/inicio/playicon.png` | **ready** | Icono CTA nativo Jugar |
+| `homeBookIcon` | `assets/brand/inicio/book.png` | **ready** | Icono CTA nativo Cómo se juega |
+
+**No registrar:** `playbutton.png`, `howtoplay.png` (referencia de diseño; CTAs son nativos).
+
+## 4. Puente actual (sin arte final global)
+
+- **Home:** logo + people + background + iconos de CTA vía `homeAssets` / `HomeCtaButton`.
+- **Otras pantallas:** wordmark tipográfico Baloo 2 (`BrandLogo`) y mark provisional (`BrandMark`) hasta slots globales `ready`.
 - Splash / adaptive: colores cream; imágenes Expo hasta reemplazo.
 
 ## 5. Prohibiciones
@@ -83,4 +96,4 @@ Cuando un archivo aprobado se añada al repo: colocar el PNG, añadir `require(.
 5. Splash de marca (opcional si basta mark + cream)
 6. Favicon de marca
 
-Hasta entonces, Home y Catalog usan wordmark / mark provisional vía componentes.
+Hasta entonces, pantallas fuera de Home usan wordmark / mark provisional vía componentes. Home ya consume `inicio/`.
