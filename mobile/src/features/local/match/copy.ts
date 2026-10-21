@@ -12,16 +12,24 @@ export function localTurnLabel(playerName: string): string {
 }
 
 export function localCoveredCardInstruction(playerName: string): string {
-  return `Pasá el teléfono a ${playerName}. Solo esa persona toca Ver carta.`;
+  return `Pasa el teléfono a ${playerName}`;
 }
 
-export const localVisibleCardInstruction = 'Ocultá la carta antes de pasarlo.';
+export const localPassPhonePrefix = 'Pasa el teléfono a ';
 
-export const localHideCardLabel = 'Ocultar';
+export const localVisibleCardInstruction =
+  'Deslizá hacia abajo para ocultar la carta antes de continuar.';
+
+export const localHideCardLabel = 'Continuar';
+
+export const localSheetHintLabel = 'Deslizá hacia arriba para ver tu carta';
+
+export const localCardContinueLabel = 'Continuar';
+
+export const localCardInfoTitle = 'Opciones';
 
 export const localCompleteCardInstruction =
   'Todos miraron su carta. La conversación es en la mesa.';
-
 export const localTableInstruction =
   'Conversen en la mesa, sin mirar cartas en el teléfono. Cuando terminen, abrí la carga.';
 

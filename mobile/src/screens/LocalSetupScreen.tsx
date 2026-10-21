@@ -4,48 +4,34 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
+  Text,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '../components/Button';
-import { HomeButton } from '../components/HomeButton';
 import { DashedButton } from '../components/DashedButton';
-import { EmptyState } from '../components/EmptyState';
-import { Heading } from '../components/Heading';
-import { HelperText } from '../components/HelperText';
-import { LocalAbandonControl } from '../components/LocalAbandonControl';
 import { Message } from '../components/Message';
 import { PlayerRosterRow } from '../components/PlayerRosterRow';
-import { TextField } from '../components/TextField';
 import {
   commitLocalMatch,
   localMatchSaveError,
 } from '../features/local/match/autosave';
-import { localSetupInstruction } from '../features/local/match/copy';
 import {
   addPlayerLabel,
   continueSetupLabel,
-  playerDisplayIndex,
   playersLimitsHelper,
-  playersScreenTitle,
-  savePlayerLabel,
 } from '../features/local/match/setupPresentation';
 import { readLocalMatch } from '../features/local/match/viewing';
 import {
-  addPlayer,
-  createSetupMatch,
-  localPlayerCountText,
+  buildSetupFromSlotNames,
+  canRemoveLocalPlayer,
+  createRosterSlots,
   localRosterMutable,
   maxLocalPlayers,
   minLocalPlayers,
-  openSetupReview,
-  removePlayer,
-  renamePlayer,
   startedLocalRosterMessage,
-  tooFewLocalPlayersMessage,
   type LocalPlayer,
-  type LocalSetupMatch,
 } from '../features/local/match/setup';
 import { useAppNavigation } from '../hooks/useAppNavigation';
 import { theme } from '../theme/theme';
@@ -55,125 +41,97 @@ function rosterHeldIsLocked(): boolean {
   return held !== null && !localRosterMutable(held);
 }
 
-function initialSetupMatch(): LocalSetupMatch {
+function initialSlots(): LocalPlayer[] {
   const held = readLocalMatch();
-  if (held?.phase !== 'setup') {
-    return createSetupMatch();
+  if (held?.phase === 'setup') {
+    return createRosterSlots(
+      held.players.map((player) => ({ id: player.id, name: player.name })),
+    );
   }
-  return {
-    version: 1,
-    status: 'preparing',
-    phase: 'setup',
-    players: held.players.map((player) => ({
-      id: player.id,
-      name: player.name,
-    })),
-    piles: [],
-    rounds: [],
-  };
+  return createRosterSlots();
 }
 
 export function LocalSetupScreen() {
   const navigation = useAppNavigation();
-  const [match, setMatch] = useState(initialSetupMatch);
-  const [draft, setDraft] = useState('');
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [error, setError] = useState<string | undefined>();
+  const [slots, setSlots] = useState(initialSlots);
   const [continueError, setContinueError] = useState<string | undefined>();
-  const editing = editingId !== null;
   const saving = useRef(false);
   const [pending, setPending] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const busy = pending || removingId !== null;
   const locked = rosterHeldIsLocked();
   const canEditRoster = !locked;
+  const removable = canRemoveLocalPlayer(slots.length);
 
-  function submit() {
-    if (saving.current) {
+  function updateSlotName(id: string, name: string) {
+    setSlots((current) =>
+      current.map((slot) => (slot.id === id ? { ...slot, name } : slot)),
+    );
+    setContinueError(undefined);
+  }
+
+  function addSlot() {
+    if (slots.length >= maxLocalPlayers || busy || locked) {
       return;
     }
-    if (rosterHeldIsLocked()) {
-      setError(startedLocalRosterMessage);
+    const highest = slots.reduce((max, slot) => {
+      const value = Number(slot.id);
+      return Number.isInteger(value) && value > max ? value : max;
+    }, 0);
+    setSlots((current) => [
+      ...current,
+      { id: String(highest + 1), name: '' },
+    ]);
+    setContinueError(undefined);
+  }
+
+  function removeSlot(id: string) {
+    if (!removable || busy || locked) {
       return;
     }
-    const result = editingId
-      ? renamePlayer(match, editingId, draft)
-      : addPlayer(match, draft);
-    if (!result.ok) {
-      setError(result.message);
-      return;
-    }
-    saving.current = true;
-    setPending(true);
-    void commitLocalMatch(result.match).then((saved) => {
-      saving.current = false;
-      setPending(false);
-      if (!saved.ok) {
-        setError(localMatchSaveError);
-        return;
+    setRemovingId(id);
+    setSlots((current) => {
+      if (!canRemoveLocalPlayer(current.length)) {
+        return current;
       }
-      setMatch(result.match);
-      setDraft('');
-      setEditingId(null);
-      setError(undefined);
-      setContinueError(undefined);
+      return current.filter((slot) => slot.id !== id);
     });
+    setRemovingId(null);
+    setContinueError(undefined);
   }
 
   function goToMatchConfig() {
-    const result = openSetupReview(match);
-    if (!result.reviewing) {
-      setContinueError(result.message);
-      return;
-    }
-    setContinueError(undefined);
-    navigation.navigate('LocalMatchConfig');
-  }
-
-  function startEdit(player: LocalPlayer) {
-    setEditingId(player.id);
-    setDraft(player.name);
-    setError(undefined);
-  }
-
-  function cancelEdit() {
-    setEditingId(null);
-    setDraft('');
-    setError(undefined);
-  }
-
-  function remove(id: string) {
-    if (saving.current) {
+    if (saving.current || busy) {
       return;
     }
     if (rosterHeldIsLocked()) {
       setContinueError(startedLocalRosterMessage);
       return;
     }
-    const next = removePlayer(match, id);
-    if (!next.ok) {
-      setContinueError(next.message);
-      return;
-    }
-    if (next.match.players === match.players) {
+    const built = buildSetupFromSlotNames(slots.map((slot) => slot.name));
+    if (!built.ok) {
+      setContinueError(built.message);
       return;
     }
     saving.current = true;
-    setRemovingId(id);
-    void commitLocalMatch(next.match).then((saved) => {
+    setPending(true);
+    void commitLocalMatch(built.match).then((saved) => {
       saving.current = false;
-      setRemovingId(null);
+      setPending(false);
       if (!saved.ok) {
         setContinueError(localMatchSaveError);
         return;
       }
-      setMatch(next.match);
       setContinueError(undefined);
-      if (editingId === id) {
-        cancelEdit();
-      }
+      navigation.navigate('LocalMatchConfig');
     });
   }
+
+  const canContinue =
+    canEditRoster &&
+    !busy &&
+    slots.length >= minLocalPlayers &&
+    slots.every((slot) => slot.name.trim().length > 0);
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
@@ -185,90 +143,46 @@ export function LocalSetupScreen() {
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
         >
-          <Heading>{playersScreenTitle}</Heading>
-          <HelperText>{playersLimitsHelper}</HelperText>
-          <HelperText>{localSetupInstruction}</HelperText>
-          <HelperText>{localPlayerCountText(match.players.length)}</HelperText>
-
           {locked ? (
             <Message tone="warning">{startedLocalRosterMessage}</Message>
           ) : null}
 
-          {match.players.length === 0 ? (
-            <EmptyState
-              title="Sin jugadores"
-              message="Todavía no hay nombres."
-            />
-          ) : null}
-
-          {match.players.map((player) => (
+          {slots.map((slot, index) => (
             <PlayerRosterRow
-              key={player.id}
-              index={playerDisplayIndex(match.players, player.id)}
-              name={player.name}
+              key={slot.id}
+              index={index + 1}
+              name={slot.name}
               editable={canEditRoster}
+              removable={removable}
               disabled={busy}
-              removing={removingId === player.id}
-              onEdit={() => startEdit(player)}
-              onRemove={() => remove(player.id)}
+              removing={removingId === slot.id}
+              onChangeName={(name) => updateSlotName(slot.id, name)}
+              onRemove={() => removeSlot(slot.id)}
             />
           ))}
 
           {canEditRoster ? (
             <>
-              {match.players.length < minLocalPlayers ? (
-                <Message tone="warning">{tooFewLocalPlayersMessage}</Message>
-              ) : null}
-              <TextField
-                label="Nombre"
-                value={draft}
-                onChangeText={setDraft}
-                error={error}
-                autoCapitalize="words"
-                autoCorrect={false}
-                returnKeyType="done"
-                blurOnSubmit
-                onSubmitEditing={submit}
-                disabled={busy}
+              <DashedButton
+                label={addPlayerLabel}
+                onPress={addSlot}
+                disabled={busy || slots.length >= maxLocalPlayers}
               />
-              {editing ? (
-                <>
-                  <Button
-                    label={savePlayerLabel}
-                    onPress={submit}
-                    disabled={busy}
-                    loading={pending}
-                  />
-                  <Button
-                    label="Cancelar"
-                    variant="secondary"
-                    onPress={cancelEdit}
-                    disabled={busy}
-                  />
-                </>
-              ) : (
-                <DashedButton
-                  label={addPlayerLabel}
-                  onPress={submit}
-                  disabled={busy || match.players.length >= maxLocalPlayers}
-                  loading={pending}
-                />
-              )}
               {continueError ? (
                 <Message tone="error">{continueError}</Message>
               ) : null}
               <View style={styles.footer}>
                 <Button
                   label={continueSetupLabel}
+                  variant="mint"
                   onPress={goToMatchConfig}
-                  disabled={busy || match.players.length < minLocalPlayers}
+                  disabled={!canContinue}
+                  loading={pending}
                 />
+                <Text style={styles.limits}>{playersLimitsHelper}</Text>
               </View>
             </>
           ) : null}
-
-          <LocalAbandonControl />
-          <HomeButton />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -285,7 +199,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flexGrow: 1,
-    gap: theme.spacing.lg,
+    gap: theme.spacing.md,
     padding: theme.spacing.xl,
     paddingBottom: theme.spacing.xxl,
     backgroundColor: theme.colors.background,
@@ -294,5 +208,10 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     marginTop: theme.spacing.sm,
     gap: theme.spacing.md,
+  },
+  limits: {
+    ...theme.typography.helper,
+    color: theme.colors.muted,
+    textAlign: 'center',
   },
 });

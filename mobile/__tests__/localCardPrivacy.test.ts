@@ -44,10 +44,18 @@ describe('privacidad del reparto y cubierta de la carga', () => {
     const visible = revealLocalCard(startLocalPass());
     expect(localCardView(match(), visible).kind).toBe('visible');
     const covered = coverLocalCard(visible);
-    expect(covered).toEqual({ index: 0, visible: false, done: false });
+    expect(covered).toEqual({
+      index: 0,
+      visible: false,
+      seen: true,
+      done: false,
+    });
     expect(localCardView(match(), covered)).toEqual({
       kind: 'covered',
       playerName: 'Ana',
+      nextPlayerName: 'Luis',
+      canContinue: true,
+      canGoBack: false,
     });
     expect(JSON.stringify(localCardView(match(), covered))).not.toContain(
       'Lenguaje',
@@ -59,26 +67,49 @@ describe('privacidad del reparto y cubierta de la carga', () => {
     expect(coverLocalCard(pass)).toBe(pass);
   });
 
-  it('ocultar sigue avanzando al siguiente tras cubrir', () => {
+  it('Continuar avanza tras cubrir si already seen', () => {
     const covered = coverLocalCard(revealLocalCard(startLocalPass()));
-    const revealedAgain = revealLocalCard(covered);
-    const next = hideLocalCard(revealedAgain, 2);
+    const next = hideLocalCard(covered, 2);
     expect(localCardView(match(), next)).toEqual({
       kind: 'covered',
       playerName: 'Luis',
+      nextPlayerName: null,
+      canContinue: false,
+      canGoBack: true,
     });
     expect(JSON.stringify(localCardView(match(), next))).not.toContain(
       'Lenguaje',
     );
   });
 
+  it('ocultar sigue avanzando al siguiente tras revelar de nuevo', () => {
+    const covered = coverLocalCard(revealLocalCard(startLocalPass()));
+    const revealedAgain = revealLocalCard(covered);
+    const next = hideLocalCard(revealedAgain, 2);
+    expect(localCardView(match(), next)).toEqual({
+      kind: 'covered',
+      playerName: 'Luis',
+      nextPlayerName: null,
+      canContinue: false,
+      canGoBack: true,
+    });
+  });
+
   it('reanudar la pasada vuelve a empezar cubierta', () => {
     const mid = hideLocalCard(revealLocalCard(startLocalPass()), 2);
     const resumed = resumedLocalPass(revealLocalCard(mid));
-    expect(resumed).toEqual({ index: 0, visible: false, done: false });
+    expect(resumed).toEqual({
+      index: 0,
+      visible: false,
+      seen: false,
+      done: false,
+    });
     expect(localCardView(match(), resumed)).toEqual({
       kind: 'covered',
       playerName: 'Ana',
+      nextPlayerName: 'Luis',
+      canContinue: false,
+      canGoBack: false,
     });
   });
 

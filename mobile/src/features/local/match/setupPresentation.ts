@@ -2,12 +2,13 @@ import type { LocalPlayer } from './setup';
 import { maxLocalPlayers, minLocalPlayers } from './setup';
 
 export const playersScreenTitle = 'Jugadores';
-export const playersLimitsHelper = `Entre ${minLocalPlayers} y ${maxLocalPlayers} jugadores para iniciar.`;
+export const playersLimitsHelper = `Mínimo ${minLocalPlayers} jugadores · Máximo ${maxLocalPlayers}`;
 export const addPlayerLabel = 'Añadir jugador';
 export const savePlayerLabel = 'Guardar';
 export const continueSetupLabel = 'Continuar';
 export const editPlayerLabel = 'Editar';
 export const removePlayerLabel = 'Quitar';
+export const playerNamePlaceholder = 'Nombre';
 
 /** Índice visual 1-based según el orden de la lista (no es el id estable). */
 export function playerDisplayIndex(

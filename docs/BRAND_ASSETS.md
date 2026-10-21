@@ -74,9 +74,18 @@ Cuando un archivo aprobado se añada al repo: colocar el PNG, añadir `require(.
 
 **No registrar:** `playbutton.png`, `howtoplay.png` (referencia de diseño; CTAs son nativos).
 
+### Assets de LocalCard (`assets/brand/carta/` — pendiente)
+
+| Clave prevista | Path previsto | Status | Uso |
+|---|---|---|---|
+| `cardHero` | `assets/brand/carta/hero.png` | **missing** | Ilustración del personaje en el hero del reparto privado (mockup `docs/art/cartasdejugador.png`) |
+
+Hasta `ready`, LocalCard usa splash mint nativo. No usar el mockup como fondo de pantalla.
+
 ## 4. Puente actual (sin arte final global)
 
 - **Home:** logo + people + background + iconos de CTA vía `homeAssets` / `HomeCtaButton`.
+- **LocalCard:** decoración mint; personaje `cardHero` pendiente.
 - **Otras pantallas:** wordmark tipográfico Baloo 2 (`BrandLogo`) y mark provisional (`BrandMark`) hasta slots globales `ready`.
 - Splash / adaptive: colores cream; imágenes Expo hasta reemplazo.
 
@@ -95,5 +104,6 @@ Cuando un archivo aprobado se añada al repo: colocar el PNG, añadir `require(.
 4. Adaptive foreground / background / monochrome de marca
 5. Splash de marca (opcional si basta mark + cream)
 6. Favicon de marca
+7. Hero de LocalCard (`assets/brand/carta/hero.png`)
 
-Hasta entonces, pantallas fuera de Home usan wordmark / mark provisional vía componentes. Home ya consume `inicio/`.
+Hasta entonces, pantallas fuera de Home usan wordmark / mark provisional vía componentes. Home ya consume `inicio/`. LocalCard espera `cardHero`.

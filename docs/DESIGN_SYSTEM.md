@@ -61,7 +61,7 @@
 
 | Componente | Props clave |
 |---|---|
-| `Button` | `label`, `onPress`, `variant`: primary \| secondary \| destructive \| accent (amarillo/navy, CTA Jugar), `disabled`, `loading` |
+| `Button` | Cáscara Home (pastilla, borde navy, Baloo): `label`, `onPress`, `variant`: primary ≈ accent (amarillo) \| secondary (surface) \| destructive (coral) \| accent \| mint (CTA Jugadores), `disabled`, `loading`. Icono+chevron solo en `HomeCtaButton`. |
 | `TextField` | `label`, `value`, `onChangeText`, `error?`, `disabled?` |
 | `Heading` / `HelperText` | texto |
 | `ContentCard` | `children` (superficie white) |
@@ -87,10 +87,10 @@
 | `BrandLogo` | Wordmark Baloo o PNG si `brandAssets` está `ready`; `variant` light \| dark; `size` sm \| md \| lg |
 | `BrandMark` | Glyph / ícono; PNG si ready; placeholder nativo provisional si no |
 | `ModeSelectCard` | Tarjeta de modo (`tone` light \| darkAccent, `icon` device \| multi); OOC-020.5 |
-| `PlayerRosterRow` | Fila de jugador (índice visual, nombre ellipsis, Editar/Quitar); OOC-020.6 |
-| `DashedButton` | CTA borde discontinuo (Añadir jugador) |
-| `PrivateDealFrame` | Layout navy del reparto privado (OOC-020.8) |
-| `SituationCard` | Carta de situación (número + texto; sin rol) |
+| `PlayerRosterRow` | Fila de jugador (badge color, avatar inicial, input/nombre, lápiz/quitar); OOC-020.6 |
+| `DashedButton` | CTA borde discontinuo navy + “+” (Añadir jugador) |
+| `PrivateDealFrame` | Layout navy del reparto privado; `layout`: scroll (default) \| fill (LocalCard sheet) |
+| `SituationCard` | Carta de situación (número + texto; sin rol); en LocalCard vive dentro del sheet |
 | `HomeButton` | Inicio unificado (reset Home; a11y «Volver al inicio»); OOC-020.11 |
 | `HomeCtaButton` | CTA de Home con icono leading + chevron (`accent` \| `secondary`); assets en `homeAssets` |
 | `ResultPlayerCard` / `StandingRow` | Filas de resultados y clasificación; OOC-020.10 |
@@ -111,7 +111,7 @@ Pares aprobados para UI migrada:
 | `colors.text` (navy `#0F4C81`) | `colors.background` (cream `#F7F3E9`) | Cuerpo, títulos cream |
 | `brand.cream` | `brand.navyDark` (`#1A1A2E`) | Títulos/helpers en ModeSelect, Carta, Mesa |
 | `colors.onPrimary` (white) | `colors.primary` (mint) | Label de botón primary |
-| `brand.navy` | `brand.yellow` | Label de botón accent |
+| `brand.navyDark` | `brand.yellow` | Label de botón primary / accent (cáscara Home) |
 | `colors.muted` (`#4A6B8A`) | cream / surface | Helpers; no usar mint como color de párrafo largo |
 
 Mint y coral son acentos (badges, puntos de ronda, error), no tipografía de lectura densa. Tamaño táctil mínimo: `theme.sizes.touch` = 48.

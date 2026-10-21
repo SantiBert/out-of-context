@@ -78,9 +78,9 @@ describe('configuración presencial', () => {
   });
 
   it('quita un jugador y no reutiliza su identificador', () => {
-    const match = accepted(
-      accepted(accepted(createSetupMatch(), 'Ana'), 'Luis'),
-      'Nora',
+    const match = ['Ana', 'Luis', 'Nora', 'Otto', 'Paz'].reduce(
+      (current, name) => accepted(current, name),
+      createSetupMatch(),
     );
     const removed = removePlayer(match, match.players[1].id);
     if (!removed.ok) {
@@ -89,9 +89,30 @@ describe('configuración presencial', () => {
     expect(removed.match.players.map((player) => player.name)).toEqual([
       'Ana',
       'Nora',
+      'Otto',
+      'Paz',
     ]);
-    const added = accepted(removed.match, 'Otto');
-    expect(added.players.map((player) => player.id)).toEqual(['1', '3', '4']);
+    const added = accepted(removed.match, 'Quique');
+    expect(added.players.map((player) => player.id)).toEqual([
+      '1',
+      '3',
+      '4',
+      '5',
+      '6',
+    ]);
+  });
+
+  it('no quita si quedarían menos de 4', () => {
+    const match = ['Ana', 'Luis', 'Nora', 'Otto'].reduce(
+      (current, name) => accepted(current, name),
+      createSetupMatch(),
+    );
+    const removed = removePlayer(match, match.players[0].id);
+    expect(removed).toEqual({
+      ok: false,
+      match,
+      message: tooFewLocalPlayersMessage,
+    });
   });
 
   it('rechaza vacío, largo, repetido y el noveno sin cambiar la lista', () => {
@@ -401,9 +422,9 @@ describe('configuración presencial', () => {
     const storage = memoryStorage();
     installLocalMatchStorage(storage);
     holdLocalMatch(null);
-    const listed = accepted(
-      accepted(accepted(createSetupMatch(), 'Ana'), 'Luis'),
-      'Nora',
+    const listed = ['Ana', 'Luis', 'Nora', 'Otto', 'Paz'].reduce(
+      (current, name) => accepted(current, name),
+      createSetupMatch(),
     );
     const renamed = renamePlayer(listed, listed.players[0].id, 'Nara');
     if (!renamed.ok) {
@@ -413,7 +434,7 @@ describe('configuración presencial', () => {
     if (!removed.ok) {
       throw new Error('baja rechazada');
     }
-    const added = addPlayer(removed.match, 'Otto');
+    const added = addPlayer(removed.match, 'Quique');
     if (!added.ok) {
       throw new Error(added.message);
     }
@@ -421,6 +442,8 @@ describe('configuración presencial', () => {
       { id: '1', name: 'Nara' },
       { id: '3', name: 'Nora' },
       { id: '4', name: 'Otto' },
+      { id: '5', name: 'Paz' },
+      { id: '6', name: 'Quique' },
     ]);
     expect(await commitLocalMatch(added.match)).toEqual({ ok: true });
     const saved = storage.raw(activeMatchKey);
@@ -439,6 +462,8 @@ describe('configuración presencial', () => {
       { id: '1', name: 'Nara' },
       { id: '3', name: 'Nora' },
       { id: '4', name: 'Otto' },
+      { id: '5', name: 'Paz' },
+      { id: '6', name: 'Quique' },
     ]);
   });
 });

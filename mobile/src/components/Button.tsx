@@ -2,7 +2,12 @@ import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
 
 import { theme } from '../theme/theme';
 
-type ButtonVariant = 'primary' | 'secondary' | 'destructive' | 'accent';
+type ButtonVariant =
+  | 'primary'
+  | 'secondary'
+  | 'destructive'
+  | 'accent'
+  | 'mint';
 
 type ButtonProps = {
   label: string;
@@ -55,6 +60,9 @@ function surfaceStyle(variant: ButtonVariant) {
   if (variant === 'accent') {
     return styles.accent;
   }
+  if (variant === 'mint') {
+    return styles.mint;
+  }
   return styles.primary;
 }
 
@@ -68,17 +76,20 @@ function labelStyle(variant: ButtonVariant) {
   if (variant === 'accent') {
     return styles.accentLabel;
   }
+  if (variant === 'mint') {
+    return styles.mintLabel;
+  }
   return styles.primaryLabel;
 }
 
 function indicatorColor(variant: ButtonVariant) {
   if (variant === 'secondary') {
-    return theme.colors.primary;
+    return theme.brand.navyDark;
   }
-  if (variant === 'accent') {
-    return theme.brand.navy;
+  if (variant === 'destructive' || variant === 'mint') {
+    return theme.colors.onPrimary;
   }
-  return theme.colors.onPrimary;
+  return theme.brand.navyDark;
 }
 
 const styles = StyleSheet.create({
@@ -86,19 +97,21 @@ const styles = StyleSheet.create({
     minHeight: theme.sizes.touch,
     minWidth: 180,
     alignSelf: 'stretch',
-    borderRadius: theme.radii.button,
+    borderRadius: theme.radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: theme.spacing.lg,
-    borderWidth: 1,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    borderWidth: 2,
+    ...theme.elevation.card,
   },
   primary: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
+    backgroundColor: theme.brand.yellow,
+    borderColor: theme.brand.navyDark,
   },
   secondary: {
     backgroundColor: theme.colors.surface,
-    borderColor: theme.colors.primary,
+    borderColor: theme.brand.navyDark,
   },
   destructive: {
     backgroundColor: theme.colors.danger,
@@ -106,25 +119,34 @@ const styles = StyleSheet.create({
   },
   accent: {
     backgroundColor: theme.brand.yellow,
-    borderColor: theme.brand.yellow,
+    borderColor: theme.brand.navyDark,
+  },
+  mint: {
+    backgroundColor: theme.brand.mint,
+    borderColor: theme.brand.mint,
   },
   inactive: {
     opacity: 0.5,
   },
   label: {
-    ...theme.typography.body,
-    fontWeight: '600',
+    fontFamily: theme.fontFamilies.displayBold,
+    fontSize: 20,
+    lineHeight: 26,
+    textAlign: 'center',
   },
   primaryLabel: {
-    color: theme.colors.onPrimary,
+    color: theme.brand.navyDark,
   },
   secondaryLabel: {
-    color: theme.colors.primary,
+    color: theme.brand.navyDark,
   },
   destructiveLabel: {
     color: theme.colors.onPrimary,
   },
   accentLabel: {
-    color: theme.brand.navy,
+    color: theme.brand.navyDark,
+  },
+  mintLabel: {
+    color: theme.colors.onPrimary,
   },
 });

@@ -25,16 +25,14 @@ import {
 describe('textos de la partida presencial', () => {
   it('la carta cubierta pide pasar el teléfono a esa persona', () => {
     expect(localTurnLabel('Ana')).toBe('Turno de Ana');
-    expect(localCoveredCardInstruction('Ana')).toBe(
-      'Pasá el teléfono a Ana. Solo esa persona toca Ver carta.',
-    );
+    expect(localCoveredCardInstruction('Ana')).toBe('Pasa el teléfono a Ana');
   });
 
-  it('la carta visible pide ocultarla antes de pasarla', () => {
+  it('la carta visible pide ocultarla antes de continuar', () => {
     expect(localVisibleCardInstruction).toBe(
-      'Ocultá la carta antes de pasarlo.',
+      'Deslizá hacia abajo para ocultar la carta antes de continuar.',
     );
-    expect(localHideCardLabel).toBe('Ocultar');
+    expect(localHideCardLabel).toBe('Continuar');
   });
 
   it('la carga pide continuar antes de mostrar gestos anotados', () => {

@@ -294,7 +294,12 @@ describe('recuperación y consistencia de la partida presencial', () => {
     const match = dealt();
     const round = match.rounds[0];
     const { recovery, held } = await restartFrom(match);
-    const pass = resumedLocalPass({ index: 2, visible: true, done: false });
+    const pass = resumedLocalPass({
+      index: 2,
+      visible: true,
+      seen: true,
+      done: false,
+    });
 
     expect(recovery).toEqual({ status: 'ready', route: 'LocalCard' });
     expect(held).toEqual(match);
@@ -302,7 +307,12 @@ describe('recuperación y consistencia de la partida presencial', () => {
     expect(held?.rounds[0]?.hands).toEqual(round?.hands);
     expect(held?.rounds[0]?.discard).toEqual(round?.discard);
     expect(held?.rounds[0]?.piles).toEqual(round?.piles);
-    expect(pass).toEqual({ index: 0, visible: false, done: false });
+    expect(pass).toEqual({
+      index: 0,
+      visible: false,
+      seen: false,
+      done: false,
+    });
     expect(localRecoveryPresentation(match)).toEqual({
       phase: 'viewing',
       playerName: 'Ana',

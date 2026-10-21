@@ -14,7 +14,6 @@ import {
   createSetupMatch,
   localRosterMutable,
   maxLocalPlayers,
-  minLocalPlayers,
   removePlayer,
   renamePlayer,
   reopenLocalSetup,
@@ -215,21 +214,23 @@ describe('regresión OOC-019', () => {
     }
 
     let setup = createSetupMatch();
-    for (const name of ['Ana', 'Luis', 'Nora', 'Otto']) {
+    for (const name of ['Ana', 'Luis', 'Nora', 'Otto', 'Pia']) {
       setup = setupTaken(addPlayer(setup, name));
     }
-    expect(setup.players).toHaveLength(minLocalPlayers);
+    expect(setup.players).toHaveLength(5);
     expect(validateSetup(setup)).toEqual({ ok: true });
 
     setup = setupTaken(renamePlayer(setup, '2', 'Lucas'));
     expect(setup.players[1]?.name).toBe('Lucas');
-    setup = setupTaken(removePlayer(setup, '4'));
-    expect(setup.players).toHaveLength(3);
-    expect(validateSetup(setup)).toEqual({
+    expect(removePlayer(setup, '4').ok).toBe(true);
+    setup = setupTaken(removePlayer(setup, '5'));
+    expect(setup.players).toHaveLength(4);
+    expect(validateSetup(setup)).toEqual({ ok: true });
+    expect(removePlayer(setup, '1')).toEqual({
       ok: false,
+      match: setup,
       message: tooFewLocalPlayersMessage,
     });
-    setup = setupTaken(addPlayer(setup, 'Otto'));
     setup = setupTaken(addPlayer(setup, 'Pia'));
     expect(setup.players).toHaveLength(5);
 

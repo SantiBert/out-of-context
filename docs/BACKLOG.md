@@ -1409,16 +1409,16 @@ Pantalla ModeSelect (navy) con tarjetas Un dispositivo / Multidispositivo. Onlin
 **Estado:** DONE  
 **Dependencias:** OOC-020.5
 
-Rediseña LocalSetup (Jugadores) con filas numeradas, Añadir discontinuo y Continuar → revisión. Reutiliza `setup.ts` y persistencia; no cambia duplicados ni ids.
+Rediseña LocalSetup (Jugadores) al mockup: **4 slots** desde el inicio, Añadir hasta 8, Continuar mint → revisión. Sin Abandonar/Inicio en el cuerpo. Reutiliza `setup.ts`; quitar jugador solo si hay más de 4.
 
 **Criterios de aceptación:**
 
-- [x] UI cream, encabezado Jugadores, límites 4–8, contador.
-- [x] `PlayerRosterRow` con índice visual, ellipsis, Editar/Quitar.
-- [x] `DashedButton` Añadir jugador; Continuar abre revisión existente.
-- [x] Roster inmutable si la partida ya empezó; revisión + Confirmar intactos.
+- [x] UI cream; 4 inputs mínimos; límites “Mínimo 4 · Máximo 8”.
+- [x] `PlayerRosterRow` badges de color, avatar inicial, input inline, quitar si `>4`.
+- [x] `DashedButton` Añadir jugador; Continuar (`mint`) abre LocalMatchConfig.
+- [x] Sin Abandonar/Inicio en Setup; roster inmutable si la partida ya empezó.
 - [x] KeyboardAvoidingView / ScrollView; errores de validación visibles.
-- [x] Sin cambio de dominio salvo presentación; tests `localSetup` + `localSetupUi`.
+- [x] Tests `localSetup` + `localSetupUi`; docs actualizados.
 
 ### OOC-020.7 — Rediseño de configuración de partida
 
@@ -1443,15 +1443,15 @@ Pantalla de revisión/confirmación (`LocalMatchConfig`). Solo muestra datos del
 **Estado:** DONE  
 **Dependencias:** OOC-020.7, OOC-019.8
 
-Rediseña LocalCard (navy): turno → Ver carta → situación → Ocultar → pasar. Reutiliza `viewing.ts` y AppState. No re-ver cartas anteriores ni filtrar roles.
+Rediseña LocalCard (navy) como **pantalla única**: hero + pill de nombre + “Pasa el teléfono a {nombre}” + Continuar + **sheet deslizante** (número/texto). Reutiliza `viewing.ts` (`seen`, `retreatLocalPass`) y AppState. Back UI al jugador anterior (puede volver a revelar). Ilustración de personaje: slot pendiente en `BRAND_ASSETS` (decoración mint nativa mientras tanto). Sin roles ni cartas ajenas.
 
 **Criterios de aceptación:**
 
-- [x] `PrivateDealFrame` + `SituationCard`.
-- [x] Estados covered / visible / complete con CTAs grandes.
-- [x] AppState cubre sin avanzar; resume cubierta.
-- [x] Sin roles ni cartas ajenas; Continuar → LocalTable.
-- [x] Header navy; tests privacy + `localCardUi`; docs actualizados.
+- [x] `PrivateDealFrame` (`layout` scroll|fill) + `SituationCard`.
+- [x] Sheet (PanResponder): expandir revela, colapsar / AppState cubre; Continuar exige `seen`.
+- [x] Back al jugador anterior; Atrás de sistema → Home (`useExitToHomeOnBack`).
+- [x] Sin roles ni cartas ajenas; tras todos → Continuar → LocalTable.
+- [x] Info modal (Reiniciar / Abandonar / Inicio); tests privacy + `localCardUi`; docs actualizados.
 
 ### OOC-020.9 — Rediseño de conversación y votación física
 

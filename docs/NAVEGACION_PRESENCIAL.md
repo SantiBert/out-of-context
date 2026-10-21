@@ -14,7 +14,7 @@ Cada fase de la interfaz tiene una pantalla. Si la ruta no coincide con la fase 
 
 - Inicio, la `Home` ya existente. Sin archivo local ofrece la entrada al presencial, además de crear sala, unirse y componentes. El rótulo de esa entrada no está definido.
 - Nombres, fase `setup`. Anota de 4 a 8 nombres en el orden guardado. No muestra cartas ni reparte hasta que el módulo de partida acepte la lista. El mazo es `backend/cards.json`.
-- Carta, fase `viewing`. Un jugador. Indica el turno. Número y texto solo tras «Ver carta». Ocultar es una acción explícita. El siguiente jugador solo después de ocultar. Al ir a segundo plano la carta se cubre sin avanzar el turno. No muestra descarte, rol ni otra mano.
+- Carta, fase `viewing`. Pantalla única: nombre, “Pasa el teléfono a {nombre}”, Continuar y sheet deslizante. Número y texto solo con el sheet abierto. Continuar exige haber revelado (`seen`) y cubre al avanzar. Back UI vuelve al jugador anterior (cubierto). Al ir a segundo plano la carta se cubre sin avanzar. No muestra descarte, rol ni otra mano.
 - Mesa, fase `conversation`. Sin carta en pantalla. Una acción explícita abre la carga. No hay manos, «¡Basta!» ni cuenta regresiva. OOC-010 no define esta pantalla: la mesa usa esa fase, ya escrita aquí y en la arquitectura presencial.
 - Carga, fase `recording`. Al entrar pide Continuar antes de mostrar gestos anotados. Borradores editables de quien ya tiene una elección aceptada. Confirmar solo si el módulo acepta todas las elecciones juntas. No confirma dos veces. No muestra cartas ni roles.
 - Resultado, fase `results`. Una fila por persona: rol (equipo/impostor), carta, gesto, señalados, puntos de la ronda y total, más una explicación. Clasificación ordenada por puntos. No vuelve a puntuar.
@@ -37,8 +37,8 @@ flowchart TD
   home -->|archivo invalido| invalid
   invalid -->|descartar confirmado| home
   setup -->|reparto aceptado| card
-  card -->|ocultar y queda otro jugador| card
-  card -->|todos ocultaron| table
+  card -->|Continuar tras ver y queda otro| card
+  card -->|todos vieron Continuar| table
   table -->|abrir carga| record
   record -->|confirmar aceptado| results
   results -->|quedan pilas| card
@@ -60,9 +60,9 @@ flowchart TD
 
 Reiniciar, durante la partida y tras confirmar, guarda una partida nueva con los mismos nombres y abre Carta cubierta. En el marcador final, «Volver a jugar» hace lo mismo y «Cambiar jugadores» reemplaza el documento por un setup con esos nombres, editable en Nombres. Abandonar, tras confirmar, borra el documento y vuelve a Inicio. Cancelar deja la fase actual. Inicio sin confirmar no abandona.
 
-La pantalla no ofrece saltar de nombres a mesa, de carta a carga, de mesa a resultado ni de carga a la carta del siguiente. Tampoco abrir la ronda siguiente con la anterior sin puntuar, ni abrirla si no alcanzan las pilas. Ocultar no revela al siguiente en el mismo paso. El orden de la pasada es el orden guardado de los nombres. El reglamento no confirma que ese sea el orden de la mesa.
+La pantalla no ofrece saltar de nombres a mesa, de carta a carga, de mesa a resultado ni de carga a la carta del siguiente. Tampoco abrir la ronda siguiente con la anterior sin puntuar, ni abrirla si no alcanzan las pilas. Continuar no deja la carta visible al pasar. El orden de la pasada es el orden guardado de los nombres. El reglamento no confirma que ese sea el orden de la mesa.
 
-Confirmar una lista válida sortea 15 pilas si hay 4 a 6 nombres y 16 si hay 7 u 8, desde las 36 de `backend/cards.json`. Reparte la primera ronda y abre Carta en `viewing`. La carta queda cubierta: el número y el texto aparecen solo con Ver carta.
+Confirmar una lista válida sortea 15 pilas si hay 4 a 6 nombres y 16 si hay 7 u 8, desde las 36 de `backend/cards.json`. Reparte la primera ronda y abre Carta en `viewing`. La carta queda cubierta: el número y el texto aparecen solo al abrir el sheet.
 
 ## Al iniciar
 

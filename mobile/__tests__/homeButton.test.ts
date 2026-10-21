@@ -21,7 +21,6 @@ describe('HomeButton OOC-020.11', () => {
       'LocalTableScreen.tsx',
       'LocalRecordScreen.tsx',
       'LocalResultsScreen.tsx',
-      'LocalSetupScreen.tsx',
       'CreateRoomScreen.tsx',
       'JoinRoomScreen.tsx',
       'LobbyScreen.tsx',
@@ -35,5 +34,11 @@ describe('HomeButton OOC-020.11', () => {
       expect(source).not.toMatch(/function HomeButton\b/);
       expect(source).not.toContain('accessibilityLabel="Volver al inicio"');
     }
+    const setupSource = readFileSync(
+      join(__dirname, '../src/screens/LocalSetupScreen.tsx'),
+      'utf8',
+    );
+    expect(setupSource).not.toContain('HomeButton');
   });
 });
+

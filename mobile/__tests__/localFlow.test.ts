@@ -86,17 +86,28 @@ function playRound(match: LocalMatch): LocalMatch {
   expect(localCardView(current, pass)).toEqual({
     kind: 'covered',
     playerName: 'Ana',
+    nextPlayerName: 'Luis',
+    canContinue: false,
+    canGoBack: false,
   });
   for (let index = 0; index < current.players.length; index += 1) {
     const visible = revealLocalCard(pass);
     const shown = localCardView(current, visible);
     expect(shown.kind).toBe('visible');
+    if (shown.kind === 'visible') {
+      expect(shown.nextPlayerName).toBe(
+        current.players[index + 1]?.name ?? null,
+      );
+    }
     pass = hideLocalCard(visible, current.players.length);
     const next = localCardView(current, pass);
     if (index < current.players.length - 1) {
       expect(next).toEqual({
         kind: 'covered',
         playerName: current.players[index + 1]?.name,
+        nextPlayerName: current.players[index + 2]?.name ?? null,
+        canContinue: false,
+        canGoBack: true,
       });
       expect(next).not.toHaveProperty('number');
     } else {

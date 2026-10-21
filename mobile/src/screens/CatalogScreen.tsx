@@ -132,6 +132,7 @@ export function CatalogScreen() {
         disabled
       />
       <Button label="Primario" onPress={() => undefined} />
+      <Button label="Mint" variant="mint" onPress={() => undefined} />
       <Button
         label="Secundario"
         variant="secondary"

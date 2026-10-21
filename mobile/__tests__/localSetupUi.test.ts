@@ -1,10 +1,17 @@
 import { describe, expect, it } from '@jest/globals';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 import { DashedButton } from '../src/components/DashedButton';
 import { PlayerRosterRow } from '../src/components/PlayerRosterRow';
 import {
   addPlayer,
+  buildSetupFromSlotNames,
+  canRemoveLocalPlayer,
+  createRosterSlots,
   createSetupMatch,
+  maxLocalPlayers,
+  minLocalPlayers,
   openSetupReview,
   renamePlayer,
   tooFewLocalPlayersMessage,
@@ -34,11 +41,30 @@ describe('localSetup UI OOC-020.6', () => {
     expect(continueSetupLabel).toBe('Continuar');
     expect(playersLimitsHelper).toContain('4');
     expect(playersLimitsHelper).toContain('8');
+    expect(playersLimitsHelper).toMatch(/Mínimo/);
   });
 
   it('exporta filas y botón discontinuo', () => {
     expect(typeof PlayerRosterRow).toBe('function');
     expect(typeof DashedButton).toBe('function');
+  });
+
+  it('siembra 4 slots vacíos y no quita bajo el mínimo', () => {
+    const slots = createRosterSlots();
+    expect(slots).toHaveLength(minLocalPlayers);
+    expect(slots.every((slot) => slot.name === '')).toBe(true);
+    expect(canRemoveLocalPlayer(minLocalPlayers)).toBe(false);
+    expect(canRemoveLocalPlayer(minLocalPlayers + 1)).toBe(true);
+  });
+
+  it('arma el setup desde nombres de slots', () => {
+    const built = buildSetupFromSlotNames(['Ana', 'Luis', 'Mia', 'Tom']);
+    expect(built.ok).toBe(true);
+    if (!built.ok) {
+      return;
+    }
+    expect(built.match.players).toHaveLength(4);
+    expect(openSetupReview(built.match).reviewing).toBe(true);
   });
 
   it('calcula índice visual 1-based sin cambiar ids al renombrar', () => {
@@ -68,5 +94,17 @@ describe('localSetup UI OOC-020.6', () => {
     const ready = withPlayers('Ana', 'Luis', 'Mia', 'Tom');
     const opened = openSetupReview(ready);
     expect(opened.reviewing).toBe(true);
+  });
+
+  it('LocalSetup no muestra Abandonar ni Inicio', () => {
+    const source = readFileSync(
+      join(__dirname, '../src/screens/LocalSetupScreen.tsx'),
+      'utf8',
+    );
+    expect(source).not.toContain('LocalAbandonControl');
+    expect(source).not.toContain('HomeButton');
+    expect(source).toContain('createRosterSlots');
+    expect(source).toContain('maxLocalPlayers');
+    expect(maxLocalPlayers).toBe(8);
   });
 });

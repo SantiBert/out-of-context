@@ -130,7 +130,13 @@ describe('privacidad al recuperar la partida', () => {
     const match = dealtMatch('viewing');
     const visible = revealLocalCard(startLocalPass());
     const resumed = localCardView(match, resumedLocalPass(visible));
-    expect(resumed).toEqual({ kind: 'covered', playerName: 'Ana' });
+    expect(resumed).toEqual({
+      kind: 'covered',
+      playerName: 'Ana',
+      nextPlayerName: 'Luis',
+      canContinue: false,
+      canGoBack: false,
+    });
     expect(JSON.stringify(resumed)).not.toContain('Lenguaje');
     expect(JSON.stringify(resumed)).not.toContain('Dieta');
 
@@ -221,7 +227,13 @@ describe('privacidad al recuperar la partida', () => {
     const resumed = resumedLocalPass(visible);
     expect(resumed.visible).toBe(false);
     const covered = localCardView(match, resumed);
-    expect(covered).toEqual({ kind: 'covered', playerName: 'Ana' });
+    expect(covered).toEqual({
+      kind: 'covered',
+      playerName: 'Ana',
+      nextPlayerName: 'Luis',
+      canContinue: false,
+      canGoBack: false,
+    });
     expect(covered).not.toHaveProperty('number');
     expect(covered).not.toHaveProperty('text');
     expect(JSON.stringify(covered)).not.toContain('Lenguaje');

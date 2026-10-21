@@ -44,6 +44,51 @@ export function createSetupMatch(): LocalSetupMatch {
   };
 }
 
+/** True si se puede quitar un jugador sin bajar del mínimo. */
+export function canRemoveLocalPlayer(count: number): boolean {
+  return count > minLocalPlayers;
+}
+
+/**
+ * Slots de UI: al menos `minLocalPlayers` filas (nombres pueden ir vacíos hasta Continuar).
+ */
+export function createRosterSlots(
+  players: readonly LocalPlayer[] = [],
+): LocalPlayer[] {
+  const slots = players.map((player) => ({
+    id: player.id,
+    name: player.name,
+  }));
+  let nextId =
+    slots.reduce((max, player) => {
+      const value = Number(player.id);
+      return Number.isInteger(value) && value > max ? value : max;
+    }, 0) + 1;
+  while (slots.length < minLocalPlayers) {
+    slots.push({ id: String(nextId), name: '' });
+    nextId += 1;
+  }
+  return slots;
+}
+
+/**
+ * Construye un setup válido desde nombres de slots (ignora vacíos al final no aplica:
+ * todos los slots deben tener nombre limpio).
+ */
+export function buildSetupFromSlotNames(
+  names: readonly string[],
+): SetupChange {
+  let match = createSetupMatch();
+  for (const rawName of names) {
+    const result = addPlayer(match, rawName);
+    if (!result.ok) {
+      return result;
+    }
+    match = result.match;
+  }
+  return { ok: true, match };
+}
+
 export function localPlayerCountText(count: number): string {
   return count === 1 ? '1 jugador' : `${count} jugadores`;
 }
@@ -203,6 +248,9 @@ export function removePlayer(match: LocalMatch, id: string): SetupChange {
   }
   if (!match.players.some((player) => player.id === id)) {
     return { ok: true, match: setupDocument(match.players) };
+  }
+  if (!canRemoveLocalPlayer(match.players.length)) {
+    return { ok: false, match, message: tooFewLocalPlayersMessage };
   }
   return {
     ok: true,

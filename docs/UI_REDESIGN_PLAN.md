@@ -201,9 +201,9 @@ Orden fijo. Cada paso entrega pantallas nativas usables; no se “tapa” con mo
 | **OOC-020.3** | Identidad gráfica y logo | `brandAssets`, BrandLogo/Mark, splash/icon config | Registro + wordmark; PNG finales documentados como pendientes |
 | **OOC-020.4** | Home y entradas | Home (Create/Join intactos) | Jerarquía marca → Jugar/Continuar → online; DONE |
 | **OOC-020.5** | Selección de modo | ModeSelect, OnlineEntry, ModeSelectCard | Un dispositivo / Multidispositivo; DONE |
-| **OOC-020.6** | Gestión de jugadores | LocalSetup + PlayerRosterRow | UI Jugadores 4–8; DONE |
+| **OOC-020.6** | Gestión de jugadores | LocalSetup + PlayerRosterRow | 4 slots + Añadir ≤8; Continuar mint; sin Abandon/Inicio; DONE |
 | **OOC-020.7** | Confirmación de partida | LocalMatchConfig | Resumen dominio + Comenzar; sin opciones inventadas; DONE |
-| **OOC-020.8** | Reparto privado | LocalCard + PrivateDealFrame + SituationCard | Navy; Ver/Ocultar; AppState; DONE |
+| **OOC-020.8** | Reparto privado | LocalCard + PrivateDealFrame + SituationCard | Navy; sheet deslizante + Continuar/`seen` + Back previo; AppState; personaje PNG pendiente; DONE |
 | **OOC-020.9** | Mesa / Carga local | LocalTable + LocalRecord + GesturePicker | Navy mesa; cream carga; privacidad OOC-019; DONE |
 | **OOC-020.10** | Resultados / clasificación | LocalResults + ResultPlayerCard + StandingRow | Cream; sin recalcular puntos; DONE |
 | **OOC-020.11** | Nav, animaciones, a11y | HomeButton, reduce-motion, Atrás local | Contraste documentado; sin libs nuevas; DONE |

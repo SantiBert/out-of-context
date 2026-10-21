@@ -3,8 +3,10 @@ import { describe, expect, it } from '@jest/globals';
 import { PrivateDealFrame } from '../src/components/PrivateDealFrame';
 import { SituationCard } from '../src/components/SituationCard';
 import {
+  localCardContinueLabel,
   localCompleteCardInstruction,
-  localHideCardLabel,
+  localPassPhonePrefix,
+  localSheetHintLabel,
   localTurnLabel,
 } from '../src/features/local/match/copy';
 import {
@@ -13,6 +15,7 @@ import {
   localCardView,
   revealLocalCard,
   resumedLocalPass,
+  retreatLocalPass,
   startLocalPass,
 } from '../src/features/local/match/viewing';
 import type { LocalMatch } from '../src/features/local/rules/round';
@@ -42,20 +45,25 @@ function match(): LocalMatch {
   };
 }
 
-describe('localCard UI OOC-020.8', () => {
+describe('localCard UI OOC-020.8 sheet', () => {
   it('exporta frame navy y SituationCard', () => {
     expect(typeof PrivateDealFrame).toBe('function');
     expect(typeof SituationCard).toBe('function');
   });
 
-  it('cubre el flujo turno → ver → ocultar → completo sin roles', () => {
+  it('cubre el flujo sheet → Continuar → completo sin roles', () => {
     const doc = match();
     let pass = startLocalPass();
     expect(localCardView(doc, pass)).toEqual({
       kind: 'covered',
       playerName: 'Ana',
+      nextPlayerName: 'Luis',
+      canContinue: false,
+      canGoBack: false,
     });
     expect(localTurnLabel('Ana')).toContain('Ana');
+    expect(localPassPhonePrefix.length).toBeGreaterThan(0);
+    expect(localSheetHintLabel.length).toBeGreaterThan(0);
 
     pass = revealLocalCard(pass);
     const visible = localCardView(doc, pass);
@@ -64,24 +72,36 @@ describe('localCard UI OOC-020.8', () => {
       return;
     }
     expect(visible.number).toBe(4);
+    expect(visible.canContinue).toBe(true);
     expect(JSON.stringify(visible)).not.toContain('impostor');
     expect(JSON.stringify(visible)).not.toContain('equipo');
 
     pass = coverLocalCard(pass);
     expect(localCardView(doc, pass).kind).toBe('covered');
+    expect(localCardView(doc, pass)).toMatchObject({ canContinue: true });
 
-    pass = revealLocalCard(pass);
     pass = hideLocalCard(pass, 2);
     expect(localCardView(doc, pass)).toEqual({
       kind: 'covered',
       playerName: 'Luis',
+      nextPlayerName: null,
+      canContinue: false,
+      canGoBack: true,
+    });
+
+    pass = retreatLocalPass(pass);
+    expect(localCardView(doc, pass)).toMatchObject({
+      playerName: 'Ana',
+      canGoBack: false,
     });
 
     pass = revealLocalCard(pass);
     pass = hideLocalCard(pass, 2);
+    pass = revealLocalCard(pass);
+    pass = hideLocalCard(pass, 2);
     expect(localCardView(doc, pass)).toEqual({ kind: 'complete' });
     expect(localCompleteCardInstruction.length).toBeGreaterThan(0);
-    expect(localHideCardLabel).toBe('Ocultar');
+    expect(localCardContinueLabel).toBe('Continuar');
   });
 
   it('al reanudar la pasada vuelve cubierta', () => {
@@ -89,6 +109,9 @@ describe('localCard UI OOC-020.8', () => {
     expect(localCardView(match(), resumed)).toEqual({
       kind: 'covered',
       playerName: 'Ana',
+      nextPlayerName: 'Luis',
+      canContinue: false,
+      canGoBack: false,
     });
   });
 });
